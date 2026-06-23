@@ -3,24 +3,6 @@
 ═══════════════════════════════════════════════════════════════════════
  Descifrador ECIES standalone  —  VerifySign
 ═══════════════════════════════════════════════════════════════════════
- Demuestra (fuera del navegador) que los datos sensibles cifrados con
- ECIES (ECDH P-256 + HKDF-SHA256 + AES-GCM) se pueden descifrar con la
- llave privada ECDH del ALMACÉN (el único que puede descifrarlos).
-
- Requisitos:
-   pip install cryptography
-
- Uso:
-   python descifrar.py
-   (te pedirá la llave privada ECDH del almacén y el blob cifrado)
-
- ¿De dónde saco la llave privada ECDH del almacén?
-   Inicia sesión como almacén en la web y, en la consola del navegador
-   (F12), ejecuta:
-       JSON.parse(localStorage.getItem('vs_session')).ecdhPrivadaB64
-   Copia esa cadena Base64. El blob cifrado (iv, ct, epk) lo ves en
-   Supabase, en las columnas tarjeta_cifrada / rfc_cifrado del cliente.
-═══════════════════════════════════════════════════════════════════════
 """
 import base64, json, sys
 
