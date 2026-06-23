@@ -1,23 +1,8 @@
-/**
- * ═══════════════════════════════════════════════════════
- *  ECDSA ENGINE  —  Web Crypto API  (P-256 + SHA-256)
- * ═══════════════════════════════════════════════════════
- *
- * Implementa los 3 scripts Python en el navegador usando
- * la Web Crypto API nativa (sin dependencias externas).
- *
- * Equivalencias:
- *   1_generar_llaves.py  →  ECDSAEngine.generarLlaves()
- *   2_firmar.py          →  ECDSAEngine.firmar()
- *   3_verificar.py       →  ECDSAEngine.verificar()
- */
-
 const ECDSAEngine = (() => {
 
   const ALGO = { name: 'ECDSA', namedCurve: 'P-256' };
   const HASH = { name: 'ECDSA', hash: { name: 'SHA-256' } };
 
-  // ── Utilidades de codificación ────────────────────────────────────────────
 
   function bufToBase64(buf) {
     return btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -43,21 +28,17 @@ const ECDSAEngine = (() => {
     return bufToHex(hash);
   }
 
-  // ── 1. GENERAR LLAVES ────────────────────────────────────────────────────
+  // ── 1. GENERAR LLAVES 
   /**
    * Genera un par de llaves ECDSA P-256.
-   * Retorna { llavePrivadaB64, llavePublicaB64, llavePrivadaCryptoKey, llavePublicaCryptoKey }
-   *
-   * Equivale a:  python 1_generar_llaves.py
    */
   async function generarLlaves() {
     const par = await crypto.subtle.generateKey(
       ALGO,
-      true,   // extractable = podemos exportar
+      true,  
       ['sign', 'verify']
     );
 
-    // Exportar en formato estándar (PKCS8 = privada, SPKI = pública)
     const privRaw = await crypto.subtle.exportKey('pkcs8', par.privateKey);
     const pubRaw  = await crypto.subtle.exportKey('spki',  par.publicKey);
 
@@ -69,20 +50,9 @@ const ECDSAEngine = (() => {
     };
   }
 
-  // ── 2. FIRMAR ─────────────────────────────────────────────────────────────
+  // ── 2. FIRMAR 
   /**
-   * Firma datos (string o ArrayBuffer) con una CryptoKey privada.
-   *
-   * Retorna un objeto firma:
-   * {
-   *   firmaB64        : string  — firma DER en Base64
-   *   sha256Contenido : string  — hash SHA-256 hex del contenido
-   *   algoritmo       : string
-   *   fechaFirma      : string  — ISO 8601
-   *   tamañoBytes     : number
-   * }
-   *
-   * Equivale a:  python 2_firmar.py
+   * Firma datos.
    */
   async function firmar(datos, llavePrivadaKey, metaOrigen = 'web') {
     const bytes = typeof datos === 'string'
@@ -103,20 +73,9 @@ const ECDSAEngine = (() => {
     };
   }
 
-  // ── 3. VERIFICAR ──────────────────────────────────────────────────────────
+  // ── 3. VERIFICAR 
   /**
    * Verifica una firma ECDSA.
-   *
-   * Retorna:
-   * {
-   *   valida           : boolean
-   *   hashesCoinciden  : boolean
-   *   sha256Actual     : string
-   *   sha256Registrado : string
-   *   mensaje          : string
-   * }
-   *
-   * Equivale a:  python 3_verificar.py
    */
   async function verificar(datos, firmaB64, llavePublicaKey, sha256Registrado = null) {
     const bytes    = typeof datos === 'string'
@@ -130,7 +89,7 @@ const ECDSAEngine = (() => {
     try {
       valida = await crypto.subtle.verify(HASH, llavePublicaKey, firmaBuf, bytes);
       mensaje = valida
-        ? 'La verificación matemática ECDSA es correcta.'
+        ? 'La verificación ECDSA es correcta.'
         : 'La firma no corresponde a los datos o la llave pública.';
     } catch (e) {
       mensaje = 'Error al verificar: ' + e.message;
@@ -139,45 +98,28 @@ const ECDSAEngine = (() => {
     const sha256Actual = await sha256Hex(bytes);
     const hashesCoinciden = sha256Registrado
       ? sha256Actual === sha256Registrado
-      : true; // si no hay hash registrado, no se valida
+      : true;
 
     return { valida, hashesCoinciden, sha256Actual, sha256Registrado, mensaje };
   }
 
-  // ── Importar llave pública desde Base64 (SPKI) ───────────────────────────
+  //  Importar llave pública 
   async function importarLlavePublica(b64) {
     const buf = base64ToBuf(b64);
     return crypto.subtle.importKey('spki', buf, ALGO, true, ['verify']);
   }
 
-  // ── Importar llave privada desde Base64 (PKCS8) ──────────────────────────
+  //  Importar llave privada 
   async function importarLlavePrivada(b64) {
     const buf = base64ToBuf(b64);
     return crypto.subtle.importKey('pkcs8', buf, ALGO, true, ['sign']);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  //  ECIES  —  Cifrado con curvas elípticas  (ECDH P-256 + AES-GCM)
-  // ═══════════════════════════════════════════════════════════════════════
-  //  ECDSA solo firma/verifica; no cifra. Para CONFIDENCIALIDAD usamos ECIES,
-  //  el esquema estándar de cifrado con curvas elípticas:
-  //
-  //    1. Quien cifra genera un par EFÍMERO ECDH P-256.
-  //    2. Hace ECDH(privada efímera, pública del destinatario) -> secreto.
-  //    3. Deriva una clave AES-256 del secreto con HKDF-SHA256.
-  //    4. Cifra el texto con AES-GCM.
-  //    5. Publica { iv, ct, epk }  (epk = llave pública efímera).
-  //
-  //  Para descifrar: ECDH(privada del destinatario, epk) -> mismo secreto
-  //  -> misma clave AES -> descifra.
-  //
-  //  Esto es EFICIENTE: la parte de curva elíptica solo deriva una clave
-  //  pequeña; el grueso del cifrado lo hace AES-GCM (rápido). Es exactamente
-  //  el balance que pediste: ECC para el intercambio, AES para los datos.
+  //  ECIES  —  Cifrado con curvas elípticas
 
   const ECDH_ALGO = { name: 'ECDH', namedCurve: 'P-256' };
 
-  // Genera un par de llaves ECDH P-256 (para cifrado, distinto del de firma)
+  // Genera un par de llaves ECDH P-256
   async function generarLlavesECDH() {
     const par = await crypto.subtle.generateKey(ECDH_ALGO, true, ['deriveKey', 'deriveBits']);
     return {
@@ -193,10 +135,8 @@ const ECDSAEngine = (() => {
     return crypto.subtle.importKey('spki', base64ToBuf(b64), ECDH_ALGO, true, []);
   }
 
-  // Deriva una clave AES-GCM 256 a partir de un secreto ECDH usando HKDF
   async function derivarClaveAES(privKey, pubKey) {
     const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: pubKey }, privKey, 256);
-    // HKDF para obtener material de clave robusto
     const hkdfKey = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
     return crypto.subtle.deriveKey(
       { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('VerifySign-ECIES') },
@@ -207,14 +147,9 @@ const ECDSAEngine = (() => {
     );
   }
 
-  /**
-   * Cifra un texto para el dueño de `pubDestinatarioB64` (ECIES).
-   * Retorna { iv, ct, epk } todo en Base64. Solo quien tenga la privada
-   * correspondiente podrá descifrar.
-   */
+  //Cifra
   async function cifrarECIES(texto, pubDestinatarioB64) {
     const pubDest = await importarECDHPub(pubDestinatarioB64);
-    // Par efímero
     const efimero = await crypto.subtle.generateKey(ECDH_ALGO, true, ['deriveKey', 'deriveBits']);
     const aesKey  = await derivarClaveAES(efimero.privateKey, pubDest);
     const iv  = crypto.getRandomValues(new Uint8Array(12));
@@ -223,10 +158,7 @@ const ECDSAEngine = (() => {
     return { iv: bufToBase64(iv), ct: bufToBase64(ct), epk: bufToBase64(epk) };
   }
 
-  /**
-   * Descifra { iv, ct, epk } usando la llave privada ECDH del destinatario.
-   * Lanza error si la privada no corresponde (AES-GCM autentica).
-   */
+  //Descifra
   async function descifrarECIES(blob, privDestinatarioB64) {
     const privDest = await importarECDHPriv(privDestinatarioB64);
     const epk      = await importarECDHPub(blob.epk);
@@ -236,17 +168,7 @@ const ECDSAEngine = (() => {
     return new TextDecoder().decode(buf);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
   //  PROTECCIÓN DE LLAVES PRIVADAS CON CONTRASEÑA  (PBKDF2 + AES-GCM)
-  // ═══════════════════════════════════════════════════════════════════════
-  //  La llave privada de FIRMA de cada usuario se cifra con una clave
-  //  derivada de su contraseña (PBKDF2-SHA256, 100k iteraciones) y se guarda
-  //  cifrada en la base de datos. Así el usuario puede iniciar sesión desde
-  //  cualquier dispositivo, y ni siquiera quien tenga la BD completa puede
-  //  leer la llave privada sin la contraseña.
-  //
-  //  IMPORTANTE: el salt para esta derivación es DISTINTO del salt usado para
-  //  el hash de login, de modo que el hash almacenado no sirve para descifrar.
 
   const PBKDF2_ITERS = 100000;
 
@@ -264,10 +186,6 @@ const ECDSAEngine = (() => {
     );
   }
 
-  /**
-   * Cifra la llave privada (PKCS8 Base64) con la contraseña del usuario.
-   * Retorna { salt, iv, ct } en Base64, listo para guardar en la BD.
-   */
   async function cifrarLlavePrivada(privB64, password) {
     const salt = randomBytes(16);
     const iv   = randomBytes(12);
@@ -276,10 +194,6 @@ const ECDSAEngine = (() => {
     return { salt: bufToBase64(salt), iv: bufToBase64(iv), ct: bufToBase64(ct) };
   }
 
-  /**
-   * Descifra la llave privada usando la contraseña. Lanza error si la
-   * contraseña es incorrecta (AES-GCM autentica).
-   */
   async function descifrarLlavePrivada(blob, password) {
     const salt = new Uint8Array(base64ToBuf(blob.salt));
     const iv   = new Uint8Array(base64ToBuf(blob.iv));
@@ -288,12 +202,6 @@ const ECDSAEngine = (() => {
     return new TextDecoder().decode(buf);
   }
 
-  /**
-   * Hash de la contraseña para LOGIN (SHA-256 con salt propio).
-   * Salt distinto al de cifrado de la llave privada -> el hash almacenado
-   * no sirve para descifrar la llave.
-   * Retorna { salt, hash } en Base64/hex.
-   */
   async function hashLogin(password, saltB64) {
     const salt = saltB64 ? saltB64 : bufToBase64(randomBytes(16));
     const data = salt + ':' + password;
@@ -301,7 +209,7 @@ const ECDSAEngine = (() => {
     return { salt, hash };
   }
 
-  // ── Leer archivo como ArrayBuffer ────────────────────────────────────────
+  //  Leer archivo
   function leerArchivo(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -311,7 +219,7 @@ const ECDSAEngine = (() => {
     });
   }
 
-  // ── Descargar texto como archivo ─────────────────────────────────────────
+  //  Descargar texto como archivo
   function descargarTexto(contenido, nombre) {
     const blob = new Blob([contenido], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);

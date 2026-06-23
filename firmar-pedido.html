@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nuevo Pedido — VerifySign</title>
+  <title>Nuevo Pedido</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
   <link rel="stylesheet" href="css/variables.css"/>
@@ -141,12 +141,16 @@
       <div class="resumen-list" id="resumen-list">
         <p class="empty-hint">Aún no has seleccionado productos.</p>
       </div>
+      <div id="limite-productos-msg" style="font-size:12px;color:var(--text-muted);margin-top:8px">
+        Límite del pedido: máximo 50 paquetes/productos.
+      </div>
 
       <div class="field field-fecha" style="margin-top:14px">
         <label>Fecha de entrega deseada</label>
         <div class="input-wrap">
           <input type="date" id="fecha-entrega"/>
         </div>
+        <small id="fecha-entrega-ayuda" style="display:block;margin-top:6px;color:var(--text-muted);font-size:11px"></small>
       </div>
 
       <div class="firma-result" id="resultado-firma">
@@ -184,7 +188,7 @@
   </div>
 
   <footer class="site-footer" style="margin-bottom:64px">
-    <span class="footer-copy">VerifySign — ECDSA P-256</span>
+    <span class="footer-copy"> ECDSA P-256</span>
     <div class="footer-socials"><i class="ti ti-shield-lock"></i></div>
   </footer>
 
@@ -201,9 +205,44 @@
       window.location.href = 'pedidos.html';
     }
 
+    const LIMITE_TOTAL_PRODUCTOS = 50;
     const cantidades = {};  // { idProducto: cantidad }
+    let modoEdicionFolio = null;
+    let pedidoEdicion = null;
 
-    function init() {
+    function fechaLocalISO(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function sumarMeses(date, meses) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const diaOriginal = d.getDate();
+      d.setMonth(d.getMonth() + meses);
+      if (d.getDate() !== diaOriginal) d.setDate(0);
+      return d;
+    }
+
+    function totalProductosSeleccionados() {
+      return Object.values(cantidades).reduce((s, n) => s + (parseInt(n, 10) || 0), 0);
+    }
+
+    function datosVisiblesPedido(p) {
+      try {
+        const doc = JSON.parse(p.contenidoPedido);
+        return {
+          items: doc.items || p.items || [],
+          importe: (doc.importe != null ? doc.importe : p.importe),
+          fechaEntrega: doc.fechaEntrega || p.fechaEntrega,
+        };
+      } catch {
+        return { items: p.items || [], importe: p.importe, fechaEntrega: p.fechaEntrega };
+      }
+    }
+
+    async function init() {
       document.getElementById('header-user-info').textContent = session.nombre + ' · ' + session.rol;
       document.getElementById('banner-session-text').textContent =
         `Sesión: ${session.nombre} (cliente). Tu llave privada firmará el pedido automáticamente.`;
@@ -223,32 +262,55 @@
           <div class="qty-row">
             <span class="qty-label">Cantidad</span>
             <div class="qty-ctrl">
-              <button class="qty-btn" onclick="cambiarQty('${p.id}',-1)">−</button>
-              <input class="qty-val" id="qty-${p.id}" type="number" min="0" value="0"
+              <button class="qty-btn" id="minus-${p.id}" onclick="cambiarQty('${p.id}',-1)">−</button>
+              <input class="qty-val" id="qty-${p.id}" type="number" min="0" max="${LIMITE_TOTAL_PRODUCTOS}" value="0"
                      onchange="setQty('${p.id}', this.value)"/>
-              <button class="qty-btn" onclick="cambiarQty('${p.id}',1)">+</button>
+              <button class="qty-btn" id="plus-${p.id}" onclick="cambiarQty('${p.id}',1)">+</button>
             </div>
           </div>
         </div>
       `).join('');
 
-      // Fecha por defecto: +3 días
-      const d = new Date(); d.setDate(d.getDate() + 3);
-      document.getElementById('fecha-entrega').value = d.toISOString().slice(0,10);
+      // Fecha por defecto: +3 días, con límite máximo de 3 meses desde hoy.
+      const fechaInput = document.getElementById('fecha-entrega');
+      const hoy = new Date();
+      const maxEntrega = sumarMeses(hoy, 3);
+      const defaultEntrega = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 3);
+      fechaInput.min = fechaLocalISO(hoy);
+      fechaInput.max = fechaLocalISO(maxEntrega);
+      fechaInput.value = fechaLocalISO(defaultEntrega > maxEntrega ? maxEntrega : defaultEntrega);
+      document.getElementById('fecha-entrega-ayuda').textContent =
+        `Puedes elegir una fecha desde hoy hasta el ${fechaInput.max}.`;
+
+      modoEdicionFolio = new URLSearchParams(window.location.search).get('edit');
+      if (modoEdicionFolio) await prepararEdicion(modoEdicionFolio);
     }
 
     function cambiarQty(id, delta) {
       const actual = cantidades[id] || 0;
-      const nuevo  = Math.max(0, actual + delta);
-      setQty(id, nuevo);
-      document.getElementById('qty-' + id).value = nuevo;
+      setQty(id, actual + delta);
     }
 
     function setQty(id, val) {
-      const n = Math.max(0, parseInt(val) || 0);
+      const solicitado = Math.max(0, parseInt(val, 10) || 0);
+      const totalOtros = Object.entries(cantidades)
+        .filter(([pid]) => pid !== id)
+        .reduce((s, [, n]) => s + (parseInt(n, 10) || 0), 0);
+      const permitido = Math.max(0, LIMITE_TOTAL_PRODUCTOS - totalOtros);
+      const n = Math.min(solicitado, permitido);
+
+      if (solicitado > permitido) {
+        mostrarToast(`El pedido no puede superar ${LIMITE_TOTAL_PRODUCTOS} productos/paquetes`, 'warning');
+      }
+
       if (n === 0) delete cantidades[id]; else cantidades[id] = n;
-      document.getElementById('card-' + id).classList.toggle('has-qty', n > 0);
+
+      const input = document.getElementById('qty-' + id);
+      if (input) input.value = n;
+      const card = document.getElementById('card-' + id);
+      if (card) card.classList.toggle('has-qty', n > 0);
       actualizarResumen();
+      return n;
     }
 
     function getItems() {
@@ -278,24 +340,108 @@
         `).join('');
       }
 
-      document.getElementById('cart-count').textContent = totalPaq + (totalPaq === 1 ? ' paquete' : ' paquetes');
+      document.getElementById('cart-count').textContent = `${totalPaq}/${LIMITE_TOTAL_PRODUCTOS}` + (totalPaq === 1 ? ' paquete' : ' paquetes');
       document.getElementById('cart-total').textContent = formatoMXN(total);
+
+      const msg = document.getElementById('limite-productos-msg');
+      if (totalPaq >= LIMITE_TOTAL_PRODUCTOS) {
+        msg.style.color = '#f07820';
+        msg.style.fontWeight = '700';
+        msg.textContent = `Límite alcanzado: ${LIMITE_TOTAL_PRODUCTOS} productos/paquetes por pedido.`;
+      } else {
+        msg.style.color = 'var(--text-muted)';
+        msg.style.fontWeight = '400';
+        msg.textContent = `Puedes agregar ${LIMITE_TOTAL_PRODUCTOS - totalPaq} productos/paquetes más. Máximo ${LIMITE_TOTAL_PRODUCTOS}.`;
+      }
+
+      CATALOGO.forEach(p => {
+        const plus = document.getElementById('plus-' + p.id);
+        if (plus) plus.disabled = totalPaq >= LIMITE_TOTAL_PRODUCTOS;
+      });
     }
 
-    // ── FIRMAR Y REGISTRAR PEDIDO ─────────────────────────────────────────
+    async function prepararEdicion(folio) {
+      try {
+        const row = await DB.getPedido(folio);
+        if (!row) throw new Error('No se encontró el pedido');
+        pedidoEdicion = mapPedido(row);
+
+        if (pedidoEdicion.clienteUsername !== session.username) {
+          alert('Solo el cliente que creó el pedido puede editarlo.');
+          window.location.href = 'pedidos.html';
+          return;
+        }
+        if (pedidoEdicion.estado !== 'firmado_cliente' || pedidoEdicion.firmaVendedor) {
+          alert('Este pedido ya fue firmado por el vendedor o ya no está pendiente. No se puede editar.');
+          window.location.href = 'pedidos.html';
+          return;
+        }
+
+        const dv = datosVisiblesPedido(pedidoEdicion);
+        Object.keys(cantidades).forEach(k => delete cantidades[k]);
+        (dv.items || []).forEach(i => {
+          if (catalogoPorId(i.id)) cantidades[i.id] = Math.max(0, parseInt(i.cantidad, 10) || 0);
+        });
+
+        CATALOGO.forEach(p => {
+          const n = cantidades[p.id] || 0;
+          const input = document.getElementById('qty-' + p.id);
+          if (input) input.value = n;
+          const card = document.getElementById('card-' + p.id);
+          if (card) card.classList.toggle('has-qty', n > 0);
+        });
+
+        const fechaInput = document.getElementById('fecha-entrega');
+        if (dv.fechaEntrega) {
+          if (dv.fechaEntrega > fechaInput.max) {
+            fechaInput.value = fechaInput.max;
+            mostrarToast('La fecha anterior superaba el nuevo límite de 3 meses; se ajustó al máximo permitido.', 'warning');
+          } else if (dv.fechaEntrega < fechaInput.min) {
+            fechaInput.value = fechaInput.min;
+          } else {
+            fechaInput.value = dv.fechaEntrega;
+          }
+        }
+
+        document.title = 'Editar Pedido';
+        document.querySelector('.form-header h1').textContent = `Editar pedido ${folio}`;
+        document.querySelector('.form-header p').textContent = 'Puedes modificarlo mientras el vendedor no lo haya firmado. Al guardar se genera una nueva firma del cliente.';
+        document.querySelector('.header-badge').innerHTML = '<i class="ti ti-edit"></i> Editar pedido';
+        document.getElementById('btn-firmar').innerHTML = '<i class="ti ti-writing"></i> Actualizar y volver a firmar';
+        actualizarResumen();
+      } catch(e) {
+        alert('No se pudo preparar la edición: ' + (e.message || e));
+        window.location.href = 'pedidos.html';
+      }
+    }
+
+    // ── FIRMAR Y REGISTRAR / EDITAR PEDIDO ─────────────────────────────────
     async function firmarPedido() {
       const items = getItems();
       if (items.length === 0) { mostrarToast('Selecciona al menos un producto', 'warning'); return; }
 
+      const totalPaq = items.reduce((s,i) => s + i.cantidad, 0);
+      if (totalPaq > LIMITE_TOTAL_PRODUCTOS) {
+        mostrarToast(`El pedido no puede superar ${LIMITE_TOTAL_PRODUCTOS} productos/paquetes`, 'warning');
+        return;
+      }
+
       const total  = items.reduce((s,i) => s + i.subtotal, 0);
-      const fecha  = document.getElementById('fecha-entrega').value;
+      const fechaInput = document.getElementById('fecha-entrega');
+      const fecha  = fechaInput.value;
+      if (!fecha) { mostrarToast('Selecciona una fecha de entrega', 'warning'); return; }
+      if (fecha < fechaInput.min) { mostrarToast('La fecha de entrega no puede ser anterior a hoy', 'warning'); return; }
+      if (fecha > fechaInput.max) {
+        mostrarToast(`La fecha de entrega no puede exceder 3 meses (${fechaInput.max})`, 'warning');
+        return;
+      }
 
       const btn = document.getElementById('btn-firmar');
       btn.disabled = true;
       btn.innerHTML = '<i class="ti ti-loader"></i> Firmando...';
 
       try {
-        const folio = await DB.nextFolio();
+        const folio = modoEdicionFolio || await DB.nextFolio();
 
         // El documento firmado es la ÚNICA fuente de verdad del pedido.
         // El nombre/usuario NO se duplican aquí: se referencian por username
@@ -312,26 +458,48 @@
         const llavePrivada = await ECDSAEngine.importarLlavePrivada(session.llavePrivadaB64);
         const firmaCliente = await ECDSAEngine.firmar(contenidoPedido, llavePrivada, 'cliente-web');
 
-        await DB.crearPedido({
-          folio,
-          clienteUsername: session.username,
-          clienteNombre:   session.nombre,
-          items, importe: total, fechaEntrega: fecha,
-          contenidoPedido,
-          firmaCliente,
-        });
+        if (modoEdicionFolio) {
+          await DB.actualizarPedido(folio, {
+            contenido_pedido: contenidoPedido,
+            items,
+            importe: total,
+            fecha_entrega: fecha,
+            firma_cliente: firmaCliente,
+            firma_vendedor: null,
+            vendedor_username: null,
+            vendedor_nombre: null,
+            estado: 'firmado_cliente',
+            motivo_rechazo: null,
+            intervenido: false,
+          });
+        } else {
+          await DB.crearPedido({
+            folio,
+            clienteUsername: session.username,
+            clienteNombre:   session.nombre,
+            items, importe: total, fechaEntrega: fecha,
+            contenidoPedido,
+            firmaCliente,
+          });
+        }
 
         document.getElementById('r-folio').textContent = folio;
         document.getElementById('r-hash').textContent  = firmaCliente.sha256Contenido;
         document.getElementById('r-firma').textContent = firmaCliente.firmaB64.substring(0,48) + '…';
+        document.querySelector('#resultado-firma .result-title').textContent =
+          modoEdicionFolio ? 'Pedido actualizado y vuelto a firmar' : 'Pedido firmado y registrado';
+        document.querySelector('#resultado-firma .result-sub').textContent =
+          modoEdicionFolio ? 'Nueva firma ECDSA P-256 + SHA-256 generada' : 'Firma ECDSA P-256 + SHA-256 generada';
         document.getElementById('resultado-firma').classList.add('visible');
         document.getElementById('resultado-firma').scrollIntoView({ behavior: 'smooth' });
 
-        btn.innerHTML = '<i class="ti ti-check"></i> Pedido firmado';
-        mostrarToast('Pedido firmado y enviado al vendedor ✓', 'success');
+        btn.innerHTML = modoEdicionFolio ? '<i class="ti ti-check"></i> Pedido actualizado' : '<i class="ti ti-check"></i> Pedido firmado';
+        mostrarToast(modoEdicionFolio ? 'Pedido actualizado y vuelto a firmar ✓' : 'Pedido firmado y enviado al vendedor ✓', 'success');
       } catch(e) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="ti ti-writing"></i> Firmar y enviar pedido';
+        btn.innerHTML = modoEdicionFolio
+          ? '<i class="ti ti-writing"></i> Actualizar y volver a firmar'
+          : '<i class="ti ti-writing"></i> Firmar y enviar pedido';
         mostrarToast('Error al firmar: ' + (e.message || e), 'error');
       }
     }

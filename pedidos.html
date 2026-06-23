@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pedidos — VerifySign</title>
+  <title>Pedidos</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
   <link rel="stylesheet" href="css/variables.css"/>
@@ -189,7 +189,7 @@
   <div class="topbar">
     <div class="topbar-brand">
       <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
-      <span class="topbar-title">VerifySign</span>
+      <span class="topbar-title">CypherSell</span>
     </div>
     <div class="topbar-actions">
       <a href="index.html" class="back-btn" style="color:var(--text-muted)"><i class="ti ti-home"></i> Inicio</a>
@@ -222,7 +222,7 @@
   </div>
 
   <footer class="site-footer">
-    <span class="footer-copy">VerifySign — ECDSA P-256</span>
+    <span class="footer-copy"> ECDSA P-256</span>
     <div class="footer-socials"><i class="ti ti-shield-lock"></i></div>
   </footer>
 
@@ -423,6 +423,22 @@
         </div>`;
 
       let accionesHtml = '';
+
+      // El cliente puede editar y volver a firmar mientras el vendedor no haya avalado.
+      if (session.rol === 'cliente' && p.clienteUsername === session.username &&
+          p.estado === 'firmado_cliente' && !p.firmaVendedor) {
+        accionesHtml += `
+          <div class="doc-section">
+            <div class="doc-section-title"><i class="ti ti-edit"></i> Editar antes del aval</div>
+            <div class="verif-note">
+              <i class="ti ti-info-circle"></i>
+              <span>Mientras el vendedor no firme, puedes corregir productos o fecha de entrega. Al guardar, el pedido se vuelve a firmar con tu llave privada y la firma anterior se reemplaza.</span>
+            </div>
+            <div class="modal-actions">
+              <a class="btn btn-primary" href="firmar-pedido.html?edit=${encodeURIComponent(p.folio)}"><i class="ti ti-writing"></i> Editar y volver a firmar</a>
+            </div>
+          </div>`;
+      }
 
       // El vendedor solo puede avalar si NO está alterado
       if (session.rol === 'vendedor' && p.estado === 'firmado_cliente') {
