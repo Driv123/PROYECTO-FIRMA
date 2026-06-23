@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro — VerifySign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 60%, var(--violet) 100%);
+      padding: 24px;
+    }
+
+    .reg-card {
+      background: var(--bg-white);
+      border-radius: var(--radius-xl);
+      width: 100%; max-width: 480px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .reg-head {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%);
+      padding: 28px 32px 24px;
+      display: flex; align-items: center; gap: 16px;
+      position: relative; overflow: hidden;
+    }
+    .reg-head::before {
+      content:''; position:absolute; right:-40px; top:-40px;
+      width:160px; height:160px; border-radius:50%;
+      background:rgba(255,255,255,0.07);
+    }
+    .reg-head-icon {
+      width: 48px; height: 48px; border-radius: 15px;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center; flex-shrink:0;
+    }
+    .reg-head-icon i { font-size: 24px; color:#fff; }
+    .reg-head h1 { font-family: var(--font-display); font-size: 20px; font-weight:800; color:#fff; margin-bottom:3px; }
+    .reg-head p  { font-size: 12px; color: rgba(255,255,255,0.65); }
+
+    .reg-body { padding: 28px 32px 32px; }
+
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--text-label); margin-bottom: 7px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .required { color: var(--blue); }
+    .input-wrap { position: relative; }
+    .input-wrap input, .input-wrap select {
+      width: 100%; padding: 11px 14px 11px 40px;
+      border: 1.5px solid var(--border-light); border-radius: var(--radius-md);
+      font-size: 14px; color: var(--text-dark);
+      background: var(--bg-form);
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+      appearance: none;
+    }
+    .input-wrap input:focus, .input-wrap select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+      background: #fff;
+    }
+    .input-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 17px; color: var(--text-muted); pointer-events: none;
+    }
+
+    .fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .role-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 8px; }
+    .role-card {
+      padding: 14px 10px; border-radius: var(--radius-md);
+      border: 2px solid var(--border-light); background: var(--bg-form);
+      cursor: pointer; text-align: center;
+      transition: all var(--transition);
+    }
+    .role-card:hover { border-color: var(--blue); }
+    .role-card.selected { border-color: var(--blue); background: rgba(56,115,255,0.06); }
+    .role-card i { font-size: 24px; margin-bottom: 6px; display:block; color: var(--text-muted); }
+    .role-card.selected i { color: var(--blue); }
+    .role-card p { font-size: 12px; font-weight: 700; color: var(--text-dark); }
+
+    .info-banner {
+      background: #edf2ff; border: 1px solid #c7d9ff;
+      border-radius: var(--radius-sm); padding: 11px 14px;
+      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 18px;
+    }
+    .info-banner i { color: var(--blue); font-size: 16px; flex-shrink:0; margin-top:1px; }
+    .info-banner p { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
+
+    .btn-reg {
+      width: 100%;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--violet) 100%);
+      color: #fff; border: none; border-radius: var(--radius-md);
+      padding: 13px; font-size: 14px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: var(--shadow-btn); margin-top: 6px;
+    }
+    .btn-reg:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-reg:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .reg-footer { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-muted); }
+    .reg-footer a { color: var(--blue); font-weight: 700; }
+
+    .error-msg {
+      background: #fff0f0; border: 1.5px solid #ffc5c5;
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: 13px; color: #d93025;
+      display: none; margin-bottom: 16px;
+      align-items: center; gap: 8px;
+    }
+    .error-msg.visible { display: flex; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .brand-footer { margin-top: 24px; font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div class="reg-card">
+    <div class="reg-head">
+      <div class="reg-head-icon"><i class="ti ti-user-plus"></i></div>
+      <div>
+        <h1>Crear cuenta</h1>
+        <p>Las llaves ECDSA se generan automáticamente</p>
+      </div>
+    </div>
+
+    <div class="reg-body">
+      <div class="error-msg" id="error-msg">
+        <i class="ti ti-alert-circle"></i>
+        <span id="error-text"></span>
+      </div>
+
+      <div class="fields-row">
+        <div class="field">
+          <label>Nombre completo <span class="required">*</span></label>
+          <div class="input-wrap">
+            <input type="text" id="inp-nombre" placeholder="Ana López"/>
+            <i class="ti ti-user input-icon"></i>
+          </div>
+        </div>
+        <div class="field">
+          <label>Usuario <span class="required">*</span></label>
+          <div class="input-wrap">
+            <input type="text" id="inp-username" placeholder="ana_lopez" autocomplete="username"/>
+            <i class="ti ti-at input-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Correo electrónico <span class="required">*</span></label>
+        <div class="input-wrap">
+          <input type="email" id="inp-email" placeholder="ana@empresa.com"/>
+          <i class="ti ti-mail input-icon"></i>
+        </div>
+      </div>
+
+      <div class="fields-row">
+        <div class="field">
+          <label>Contraseña <span class="required">*</span></label>
+          <div class="input-wrap">
+            <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="new-password"/>
+            <i class="ti ti-lock input-icon"></i>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirmar <span class="required">*</span></label>
+          <div class="input-wrap">
+            <input type="password" id="inp-pass2" placeholder="••••••••" autocomplete="new-password"/>
+            <i class="ti ti-lock-check input-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:8px">
+        <label>Rol en el sistema <span class="required">*</span></label>
+        <div class="role-grid">
+          <div class="role-card" onclick="selectRol('cliente', this)">
+            <i class="ti ti-shopping-cart"></i>
+            <p>Cliente</p>
+          </div>
+          <div class="role-card" onclick="selectRol('vendedor', this)">
+            <i class="ti ti-briefcase"></i>
+            <p>Vendedor</p>
+          </div>
+          <div class="role-card" onclick="selectRol('almacen', this)">
+            <i class="ti ti-building-warehouse"></i>
+            <p>Almacén</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos del cliente (solo visibles si el rol es Cliente) -->
+      <div id="datos-cliente" style="display:none">
+        <div class="field">
+          <label>Número de tarjeta <span class="required">*</span> <span style="color:#e24b4a;font-weight:600">(se cifra)</span></label>
+          <div class="input-wrap">
+            <input type="text" id="inp-tarjeta" class="has-icon" placeholder="4111 1111 1111 1111" maxlength="19"/>
+            <i class="ti ti-credit-card input-icon"></i>
+          </div>
+        </div>
+        <div class="field">
+          <label>RFC <span class="required">*</span> <span style="color:#e24b4a;font-weight:600">(se cifra)</span></label>
+          <div class="input-wrap">
+            <input type="text" id="inp-rfc" class="has-icon" placeholder="XAXX010101000" maxlength="13" style="text-transform:uppercase"/>
+            <i class="ti ti-id input-icon"></i>
+          </div>
+        </div>
+        <div class="field">
+          <label>Dirección <span class="required">*</span> <span style="color:#1eaa5a;font-weight:600">(en claro)</span></label>
+          <div class="input-wrap">
+            <input type="text" id="inp-direccion" class="has-icon" placeholder="Av. Reforma 123, CDMX"/>
+            <i class="ti ti-map-pin input-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-banner">
+        <i class="ti ti-key"></i>
+        <p>Al registrarte se genera tu par de llaves ECDSA P-256. Tu <strong>llave privada se cifra con tu contraseña</strong> y se guarda así en la base de datos (puedes entrar desde cualquier dispositivo). La <strong>tarjeta</strong> y el <strong>RFC</strong> se cifran con ECIES hacia la llave del <strong>almacén</strong>: solo el almacén podrá descifrarlos. <strong>Nota:</strong> debe existir un usuario Almacén antes de registrar clientes.</p>
+      </div>
+
+      <button class="btn-reg" id="btn-reg" onclick="doRegistro()">
+        <i class="ti ti-user-plus"></i> Crear cuenta y generar llaves
+      </button>
+
+      <div class="reg-footer">
+        ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+      </div>
+    </div>
+  </div>
+
+  <p class="brand-footer">VerifySign — ECDSA P-256 + SHA-256</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/ecdsa-engine.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    let rolSeleccionado = null;
+
+    function selectRol(rol, el) {
+      document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      rolSeleccionado = rol;
+      // Mostrar campos de cliente solo para ese rol
+      document.getElementById('datos-cliente').style.display = (rol === 'cliente') ? 'block' : 'none';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      document.getElementById('error-text').textContent = msg;
+      el.style.display = 'flex';
+    }
+    function hideError() { document.getElementById('error-msg').style.display = 'none'; }
+
+    async function doRegistro() {
+      hideError();
+      const nombre   = document.getElementById('inp-nombre').value.trim();
+      const username = document.getElementById('inp-username').value.trim().toLowerCase();
+      const email    = document.getElementById('inp-email').value.trim();
+      const pass     = document.getElementById('inp-pass').value;
+      const pass2    = document.getElementById('inp-pass2').value;
+
+      if (!nombre || !username || !email || !pass) { showError('Completa todos los campos obligatorios.'); return; }
+      if (pass !== pass2)   { showError('Las contraseñas no coinciden.'); return; }
+      if (pass.length < 6)  { showError('La contraseña debe tener al menos 6 caracteres.'); return; }
+      if (!rolSeleccionado) { showError('Selecciona un rol.'); return; }
+
+      // Datos del cliente (obligatorios solo para rol cliente)
+      let tarjeta = '', rfc = '', direccion = '';
+      if (rolSeleccionado === 'cliente') {
+        tarjeta   = document.getElementById('inp-tarjeta').value.trim();
+        rfc       = document.getElementById('inp-rfc').value.trim().toUpperCase();
+        direccion = document.getElementById('inp-direccion').value.trim();
+        if (!tarjeta || !rfc || !direccion) {
+          showError('Como cliente debes ingresar tarjeta, RFC y dirección.'); return;
+        }
+      }
+
+      const btn = document.getElementById('btn-reg');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Cifrando y generando llaves...';
+
+      try {
+        if (await DB.existeUsuario(username)) {
+          showError('Ese nombre de usuario ya existe. Elige otro.');
+          btn.disabled = false; btn.innerHTML = '<i class="ti ti-user-plus"></i> Crear cuenta y generar llaves';
+          return;
+        }
+
+        // Si es cliente, necesita la llave pública del ALMACÉN para cifrar.
+        let almacen = null;
+        if (rolSeleccionado === 'cliente') {
+          almacen = await DB.getAlmacen();
+          if (!almacen || !almacen.ecdh_publica) {
+            showError('Aún no hay un almacén registrado. Debe registrarse primero un usuario con rol Almacén (es quien podrá descifrar los datos sensibles).');
+            btn.disabled = false; btn.innerHTML = '<i class="ti ti-user-plus"></i> Crear cuenta y generar llaves';
+            return;
+          }
+        }
+
+        // 1) Llaves de FIRMA (ECDSA P-256)
+        const llaves = await ECDSAEngine.generarLlaves();
+
+        // 2) Cifrar la llave privada de firma con la contraseña (para guardarla en BD)
+        const llavePrivadaCifrada = await ECDSAEngine.cifrarLlavePrivada(llaves.llavePrivadaB64, pass);
+
+        // 3) Hash de login (salt PROPIO, distinto del de la llave)
+        const login = await ECDSAEngine.hashLogin(pass);
+
+        // 4) Si es ALMACÉN: generar su par ECDH y cifrar la privada ECDH con su contraseña
+        let ecdhPublicaB64 = null, ecdhPrivadaCifrada = null;
+        if (rolSeleccionado === 'almacen') {
+          const ecdh = await ECDSAEngine.generarLlavesECDH();
+          ecdhPublicaB64     = ecdh.pubB64;
+          ecdhPrivadaCifrada = await ECDSAEngine.cifrarLlavePrivada(ecdh.privB64, pass);
+        }
+
+        // 5) Si es CLIENTE: cifrar tarjeta y RFC hacia la pública ECDH del almacén
+        let tarjetaCifrada = null, rfcCifrado = null;
+        if (rolSeleccionado === 'cliente') {
+          tarjetaCifrada = await ECDSAEngine.cifrarECIES(tarjeta, almacen.ecdh_publica);
+          rfcCifrado     = await ECDSAEngine.cifrarECIES(rfc, almacen.ecdh_publica);
+        }
+
+        // 6) Guardar en Supabase (todo lo privado va cifrado)
+        await DB.crearUsuario({
+          username, nombre, email,
+          passwordHash: login.hash, passwordSalt: login.salt,
+          rol: rolSeleccionado,
+          llavePublicaB64: llaves.llavePublicaB64,
+          llavePrivadaCifrada,
+          ecdhPublicaB64, ecdhPrivadaCifrada,
+          tarjetaCifrada, rfcCifrado, direccion,
+        });
+
+        // 7) Sesión local (la privada en claro vive solo en memoria de sesión)
+        const session = {
+          username, nombre, rol: rolSeleccionado,
+          llavePublicaB64: llaves.llavePublicaB64,
+          llavePrivadaB64: llaves.llavePrivadaB64,
+        };
+        if (rolSeleccionado === 'almacen') {
+          // El almacén guarda su ECDH privada en la sesión para poder descifrar
+          const ecdhPriv = await ECDSAEngine.descifrarLlavePrivada(ecdhPrivadaCifrada, pass);
+          session.ecdhPrivadaB64 = ecdhPriv;
+          session.ecdhPublicaB64 = ecdhPublicaB64;
+        }
+        localStorage.setItem('vs_session', JSON.stringify(session));
+
+        window.location.href = 'index.html';
+
+      } catch (err) {
+        showError('Error en el registro: ' + (err.message || err));
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-user-plus"></i> Crear cuenta y generar llaves';
+      }
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') doRegistro(); });
+  </script>
+</body>
+</html>

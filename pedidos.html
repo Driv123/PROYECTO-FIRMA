@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pedidos — VerifySign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-form); }
+    .page-main { padding: 20px 24px 40px; flex: 1; }
+
+    /* FILTROS */
+    .filtros { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .filtro-btn {
+      border: 1.5px solid var(--border-light); background: var(--bg-white);
+      border-radius: 20px; padding: 7px 16px; font-size: 12px; font-weight: 700;
+      color: var(--text-muted); cursor: pointer; transition: all .2s;
+      font-family: var(--font-sans);
+    }
+    .filtro-btn:hover { border-color: var(--blue); }
+    .filtro-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+    /* LISTA */
+    .pedido-card {
+      background: var(--bg-white); border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 16px 18px; margin-bottom: 10px;
+      cursor: pointer; transition: box-shadow .2s, transform .15s, border-color .2s;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .pedido-card:hover { box-shadow: var(--shadow-card); transform: translateY(-1px); border-color: var(--border-input); }
+    .pedido-estado-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pedido-estado-icon i { font-size: 22px; }
+    .pedido-body { flex: 1; min-width: 0; }
+    .pedido-folio { font-size: 14px; font-weight: 800; color: var(--text-dark); }
+    .pedido-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .pedido-right { text-align: right; flex-shrink: 0; }
+    .pedido-importe { font-size: 15px; font-weight: 800; color: var(--text-dark); font-family: var(--font-display); }
+    .estado-pill {
+      display: inline-flex; align-items: center; gap: 4px; border-radius: 20px;
+      padding: 3px 10px; font-size: 10px; font-weight: 700; margin-top: 4px;
+    }
+
+    .empty-state {
+      text-align: center; padding: 50px 20px; color: var(--text-muted);
+      background: var(--bg-white); border: 1px dashed var(--border-light);
+      border-radius: var(--radius-lg);
+    }
+    .empty-state i { font-size: 42px; color: #c8d4ee; display: block; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* MODAL DETALLE */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 500; background: rgba(13,21,64,0.5);
+      display: none; align-items: flex-end; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; animation: fadeIn .2s ease; }
+    .modal {
+      background: var(--bg-form); width: 100%; max-width: 560px;
+      max-height: 92vh; overflow-y: auto;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      animation: slideUp .3s ease both;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @media (min-width: 640px) {
+      .modal-overlay { align-items: center; }
+      .modal { border-radius: var(--radius-xl); max-height: 88vh; }
+    }
+
+    .modal-head {
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+      padding: 22px 24px; position: sticky; top: 0; z-index: 2;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    .modal-head-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .modal-folio { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: #fff; }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: rgba(255,255,255,0.2); color: #fff; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-cliente { font-size: 13px; color: rgba(255,255,255,0.75); }
+    .modal-body { padding: 20px 24px 24px; }
+
+    .doc-section {
+      background: var(--bg-white); border: 1px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px;
+    }
+    .doc-section-title {
+      font-size: 12px; font-weight: 700; color: var(--text-label);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .doc-section-title i { color: var(--blue); font-size: 15px; }
+
+    .item-line {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 13px;
+    }
+    .item-line:last-child { border-bottom: none; }
+    .item-line .il-name { color: var(--text-dark); font-weight: 600; }
+    .item-line .il-detail { font-size: 11px; color: var(--text-muted); }
+    .item-line .il-sub { font-weight: 700; color: var(--text-dark); }
+    .item-total {
+      display: flex; justify-content: space-between; padding-top: 12px; margin-top: 6px;
+      border-top: 2px solid var(--border-light); font-size: 15px; font-weight: 800; color: var(--text-dark);
+    }
+
+    .firma-box {
+      display: flex; align-items: flex-start; gap: 10px; padding: 12px;
+      border-radius: var(--radius-sm); margin-bottom: 8px; font-size: 12px;
+    }
+    .firma-box.ok   { background: #eafaf0; }
+    .firma-box.fail { background: #fff0f0; border: 1px solid #f3c0c0; }
+    .firma-box.pend { background: var(--bg-form); border: 1px dashed var(--border-input); }
+    .firma-box i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .firma-box.ok i   { color: #1eaa5a; }
+    .firma-box.fail i { color: #e24b4a; }
+    .firma-box.pend i { color: var(--text-muted); }
+    .fb-title { font-weight: 700; color: var(--text-dark); }
+    .fb-sub { color: var(--text-muted); margin-top: 2px; word-break: break-all; font-family: 'Courier New', monospace; font-size: 10px; }
+
+    .alerta-alterado {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: linear-gradient(135deg,#fff0f0,#ffe0e0); border: 2px solid #e24b4a;
+      border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 14px;
+    }
+    .alerta-alterado i { color: #e24b4a; font-size: 24px; flex-shrink: 0; }
+    .aa-title { font-weight: 800; color: #c0392b; font-size: 14px; font-family: var(--font-display); }
+    .aa-desc { font-size: 12px; color: #99312a; line-height: 1.5; margin-top: 3px; }
+
+    .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .check-item {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border-radius: var(--radius-sm); font-size: 11px; font-weight: 600;
+    }
+    .check-ok   { background: rgba(30,170,90,0.12); color: #1eaa5a; }
+    .check-fail { background: rgba(226,75,74,0.10); color: #e24b4a; }
+    .check-wait { background: var(--bg-form); color: var(--text-muted); border: 1px solid var(--border-light); }
+    .check-item i { font-size: 16px; flex-shrink: 0; }
+
+    .resultado-final {
+      border-radius: var(--radius-md); padding: 18px; text-align: center;
+      margin-top: 12px; display: none;
+    }
+    .resultado-final.visible { display: block; animation: fadeUp .4s ease; }
+    .resultado-final.valido   { background: linear-gradient(135deg,#eafaf0,#d4f5e4); border: 2px solid #1eaa5a; }
+    .resultado-final.invalido { background: linear-gradient(135deg,#fff0f0,#ffdcdc); border: 2px solid #e24b4a; }
+    .rf-icon { font-size: 40px; display: block; margin-bottom: 8px; }
+    .rf-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+    .rf-desc { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
+
+    .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .modal-actions .btn { flex: 1; min-width: 140px; }
+
+    .verif-note {
+      background: #edf2ff; border: 1px solid #c7d9ff; border-radius: var(--radius-sm);
+      padding: 10px 12px; font-size: 11px; color: var(--text-mid); line-height: 1.5;
+      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px;
+    }
+    .verif-note i { color: var(--blue); font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+    /* COMPARACIÓN CONTRA CLIENTES */
+    .cmp-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm); margin-bottom: 6px; background: var(--bg-white);
+    }
+    .cmp-row.cmp-ok { border-color: #a3e9c0; background: #f4fcf7; }
+    .cmp-left { display: flex; align-items: center; gap: 10px; }
+    .cmp-left i { font-size: 18px; flex-shrink: 0; }
+    .cmp-name { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+    .cmp-user { font-weight: 400; color: var(--text-muted); font-size: 11px; }
+    .cmp-tag { font-size: 10px; color: var(--blue); font-weight: 600; margin-top: 1px; }
+    .cmp-badge { font-size: 10px; font-weight: 700; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+    .cb-ok { background: #eafaf0; color: #1eaa5a; }
+    .cb-no { background: var(--bg-form); color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
+      <span class="topbar-title">VerifySign</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="index.html" class="back-btn" style="color:var(--text-muted)"><i class="ti ti-home"></i> Inicio</a>
+    </div>
+  </div>
+
+  <main class="page-main">
+    <div style="margin-bottom:18px">
+      <h1 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-dark)" id="page-title">Pedidos</h1>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:4px" id="page-desc">—</p>
+    </div>
+
+    <div class="filtros" id="filtros"></div>
+
+    <div id="lista-pedidos"></div>
+  </main>
+
+  <!-- MODAL DETALLE -->
+  <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) cerrarModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-head-top">
+          <span class="modal-folio" id="m-folio">—</span>
+          <button class="modal-close" onclick="cerrarModal()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal-cliente" id="m-cliente">—</div>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span class="footer-copy">VerifySign — ECDSA P-256</span>
+    <div class="footer-socials"><i class="ti ti-shield-lock"></i></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/ecdsa-engine.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    const session = JSON.parse(localStorage.getItem('vs_session') || 'null');
+    if (!session) { window.location.href = 'login.html'; }
+
+    let filtroActual = 'todos';
+    let pedidoActivo = null;
+    let verifClienteOk = false;
+    let usersMap = {};       // username -> registro de usuario (de Supabase)
+    let pedidosCache = [];   // últimos pedidos cargados
+
+    const ROL_VISTA = {
+      cliente:  { title: 'Mis pedidos',          desc: 'Pedidos que has creado y su estado de verificación.' },
+      vendedor: { title: 'Pedidos por avalar',   desc: 'Verifica la firma del cliente y añade tu contra-firma como aval.' },
+      almacen:  { title: 'Pedidos para entrega', desc: 'Verifica ambas firmas antes de confirmar la entrega.' },
+    };
+
+    async function init() {
+      const v = ROL_VISTA[session.rol] || ROL_VISTA.cliente;
+      document.getElementById('page-title').textContent = v.title;
+      document.getElementById('page-desc').textContent  = v.desc;
+
+      const filtros = [
+        { id: 'todos', label: 'Todos' },
+        { id: 'firmado_cliente',  label: 'Por avalar' },
+        { id: 'firmado_vendedor', label: 'Por entregar' },
+        { id: 'entregado',        label: 'Entregados' },
+      ];
+      document.getElementById('filtros').innerHTML = filtros.map(f =>
+        `<button class="filtro-btn ${f.id==='todos'?'active':''}" data-f="${f.id}" onclick="setFiltro('${f.id}')">${f.label}</button>`
+      ).join('');
+
+      // Cargar usuarios (para llaves públicas) y pedidos
+      await cargarUsuarios();
+      await recargar();
+
+      // REALTIME: refrescar lista (y el modal abierto) ante cualquier cambio
+      DB.suscribirPedidos(async () => {
+        await recargar();
+        // Si hay un pedido abierto, re-renderizar su modal con los datos nuevos
+        if (pedidoActivo) {
+          const fresco = await DB.getPedido(pedidoActivo.folio);
+          if (fresco) abrirModal(fresco.folio);
+        }
+      });
+    }
+
+    async function cargarUsuarios() {
+      try {
+        const arr = await DB.getTodosUsuarios();
+        usersMap = {};
+        arr.forEach(u => { usersMap[u.username] = u; });
+      } catch (e) {
+        mostrarToast('Error cargando usuarios: ' + (e.message||e), 'error');
+      }
+    }
+
+    async function recargar() {
+      try {
+        const rows = await DB.getPedidos();
+        pedidosCache = rows.map(mapPedido);
+        render();
+      } catch (e) {
+        document.getElementById('lista-pedidos').innerHTML =
+          `<div class="empty-state"><i class="ti ti-cloud-off"></i><p>No se pudo conectar a la base de datos.<br><span style="font-size:12px">${e.message||e}</span></p></div>`;
+      }
+    }
+
+    function setFiltro(f) {
+      filtroActual = f;
+      document.querySelectorAll('.filtro-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+      render();
+    }
+
+    // Lee items/importe SIEMPRE del contenido firmado (fuente de verdad).
+    // Así, si el sniffer altera el contenido, la UI muestra el valor alterado.
+    function datosVisibles(p) {
+      try {
+        const doc = JSON.parse(p.contenidoPedido);
+        return {
+          items: doc.items || p.items || [],
+          importe: (doc.importe != null ? doc.importe : p.importe),
+          fechaEntrega: doc.fechaEntrega || p.fechaEntrega,
+        };
+      } catch {
+        return { items: p.items || [], importe: p.importe, fechaEntrega: p.fechaEntrega };
+      }
+    }
+
+    function pedidosVisibles() {
+      let arr = pedidosCache.slice();
+      if (session.rol === 'cliente') arr = arr.filter(p => p.clienteUsername === session.username);
+      if (filtroActual !== 'todos')  arr = arr.filter(p => p.estado === filtroActual);
+      return arr;
+    }
+
+    function render() {
+      const arr = pedidosVisibles();
+      const cont = document.getElementById('lista-pedidos');
+      if (arr.length === 0) {
+        cont.innerHTML = `<div class="empty-state"><i class="ti ti-package-off"></i><p>No hay pedidos en esta vista.</p></div>`;
+        return;
+      }
+      cont.innerHTML = arr.map(p => {
+        const e = ESTADOS[p.estado];
+        const dv = datosVisibles(p);
+        const totalPaq = dv.items.reduce((s,i) => s + (i.cantidad||0), 0);
+        const flag = p.intervenido ? ' <span style="color:#e24b4a">⚠</span>' : '';
+        return `
+          <div class="pedido-card" onclick="abrirModal('${p.folio}')">
+            <div class="pedido-estado-icon" style="background:${e.bg}">
+              <i class="ti ${e.icon}" style="color:${e.color}"></i>
+            </div>
+            <div class="pedido-body">
+              <div class="pedido-folio">${p.folio}${flag}</div>
+              <div class="pedido-meta">${p.clienteNombre} · ${totalPaq} paquetes · ${dv.items.length} productos</div>
+            </div>
+            <div class="pedido-right">
+              <div class="pedido-importe">${formatoMXN(dv.importe)}</div>
+              <span class="estado-pill" style="background:${e.bg};color:${e.color}">
+                <i class="ti ${e.icon}" style="font-size:11px"></i> ${e.label}
+              </span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── MODAL ────────────────────────────────────────────────────────────
+    async function abrirModal(folio) {
+      pedidoActivo = await DB.getPedido(folio);
+      if (!pedidoActivo) return;
+      pedidoActivo = mapPedido(pedidoActivo);
+
+      verifClienteOk = false;
+
+      const p = pedidoActivo;
+      const dv = datosVisibles(p);
+
+      // Nombre del cliente (de su registro, no del contenido)
+      const cliReg = usersMap[p.clienteUsername];
+      const nombreCliente = cliReg ? cliReg.nombre : p.clienteNombre;
+
+      // Verificación automática de integridad y firmas al abrir
+      const integ = await verificarIntegridad(p);
+
+      document.getElementById('m-folio').textContent = p.folio;
+      document.getElementById('m-cliente').innerHTML =
+        `${nombreCliente} · ${new Date(p.creadoEn).toLocaleString('es-MX')}`;
+
+      const itemsHtml = dv.items.map(i => `
+        <div class="item-line">
+          <div>
+            <span class="il-name">${i.nombre}</span><br>
+            <span class="il-detail">${i.cantidad} × ${formatoMXN(i.precio)}</span>
+          </div>
+          <span class="il-sub">${formatoMXN(i.subtotal)}</span>
+        </div>`).join('');
+
+      const bannerAlerta = integ.alterado ? `
+        <div class="alerta-alterado">
+          <i class="ti ti-alert-triangle"></i>
+          <div>
+            <div class="aa-title">Documento alterado</div>
+            <div class="aa-desc">${integ.hashOk
+              ? 'Una firma no corresponde al firmante registrado.'
+              : 'El contenido no coincide con lo que se firmó (hash distinto). Este pedido fue manipulado después de la firma.'}</div>
+          </div>
+        </div>` : '';
+
+      const fbCliente = `
+        <div class="firma-box ${integ.clienteOk ? 'ok' : 'fail'}">
+          <i class="ti ${integ.clienteOk ? 'ti-circle-check' : 'ti-alert-triangle'}"></i>
+          <div>
+            <div class="fb-title">Firma del cliente: ${nombreCliente}</div>
+            <div class="fb-sub" style="font-family:var(--font-sans)">${integ.clienteOk ? 'Válida ✓' : 'INVÁLIDA — documento alterado ✗'}</div>
+          </div>
+        </div>`;
+      const fbVendedor = p.firmaVendedor ? `
+        <div class="firma-box ${integ.vendedorOk ? 'ok' : 'fail'}">
+          <i class="ti ${integ.vendedorOk ? 'ti-circle-check' : 'ti-alert-triangle'}"></i>
+          <div>
+            <div class="fb-title">Contra-firma del vendedor: ${p.vendedorNombre}</div>
+            <div class="fb-sub" style="font-family:var(--font-sans)">${integ.vendedorOk ? 'Válida ✓' : 'INVÁLIDA — documento alterado ✗'}</div>
+          </div>
+        </div>` : `
+        <div class="firma-box pend">
+          <i class="ti ti-clock"></i>
+          <div>
+            <div class="fb-title">Contra-firma del vendedor</div>
+            <div class="fb-sub" style="font-family:var(--font-sans)">Pendiente</div>
+          </div>
+        </div>`;
+
+      let accionesHtml = '';
+
+      // El vendedor solo puede avalar si NO está alterado
+      if (session.rol === 'vendedor' && p.estado === 'firmado_cliente') {
+        accionesHtml = `
+          <div class="doc-section">
+            <div class="doc-section-title"><i class="ti ti-shield-check"></i> Verificar y avalar</div>
+            <div class="verif-note">
+              <i class="ti ti-info-circle"></i>
+              <span>El pedido dice venir de <strong>${nombreCliente}</strong>. El sistema probará la firma contra la llave pública de <strong>todos</strong> los clientes registrados: solo debe validar con la de ${nombreCliente}. No podrás avalar hasta verificar.</span>
+            </div>
+            <div class="check-grid" id="chk-grid-v">
+              <div class="check-item check-wait" id="cv-hash"><i class="ti ti-clock"></i> Integridad SHA-256</div>
+              <div class="check-item check-wait" id="cv-firma"><i class="ti ti-clock"></i> Firma del cliente</div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-label);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px">
+              Comparación contra clientes registrados
+            </div>
+            <div id="comparacion-clientes">
+              <p class="empty-hint" style="text-align:left">Pulsa "Verificar firma" para comparar contra todos los clientes.</p>
+            </div>
+            <div class="modal-actions" style="margin-top:14px">
+              <button class="btn btn-secondary" onclick="verificarComoVendedor()"><i class="ti ti-shield-check"></i> Verificar firma del cliente</button>
+              <button class="btn btn-primary" id="btn-contrafirma" onclick="contraFirmar()" disabled><i class="ti ti-lock"></i> Avalar (verifica primero)</button>
+            </div>
+          </div>`;
+      }
+
+      if (session.rol === 'almacen' && p.estado === 'firmado_vendedor') {
+        accionesHtml = `
+          <div class="doc-section">
+            <div class="doc-section-title"><i class="ti ti-shield-check"></i> Verificación final del almacén</div>
+            <div class="verif-note">
+              <i class="ti ti-info-circle"></i>
+              <span>El sistema verificará <strong>ambas firmas</strong> contra las llaves públicas registradas de ${nombreCliente} (cliente) y ${p.vendedorNombre} (vendedor) antes de autorizar la entrega.</span>
+            </div>
+            <div class="check-grid" id="chk-grid-a">
+              <div class="check-item check-wait" id="ca-hashc"><i class="ti ti-clock"></i> Hash cliente</div>
+              <div class="check-item check-wait" id="ca-firmac"><i class="ti ti-clock"></i> Firma cliente</div>
+              <div class="check-item check-wait" id="ca-hashv"><i class="ti ti-clock"></i> Hash vendedor</div>
+              <div class="check-item check-wait" id="ca-firmav"><i class="ti ti-clock"></i> Firma vendedor</div>
+            </div>
+            <div class="resultado-final" id="rf-almacen">
+              <span class="rf-icon" id="rf-icon">🔍</span>
+              <p class="rf-title" id="rf-title"></p>
+              <p class="rf-desc" id="rf-desc"></p>
+            </div>
+            <div class="modal-actions">
+              <button class="btn btn-primary" id="btn-verif-final" onclick="verificarComoAlmacen()"><i class="ti ti-shield-check"></i> Verificar ambas firmas y entregar</button>
+            </div>
+          </div>`;
+      }
+
+      if (p.estado === 'entregado') {
+        accionesHtml = `
+          <div class="resultado-final valido visible" style="margin-top:0">
+            <span class="rf-icon">✅</span>
+            <p class="rf-title" style="color:#1eaa5a">Pedido verificado y entregado</p>
+            <p class="rf-desc">Ambas firmas ECDSA fueron validadas.</p>
+          </div>`;
+      }
+      if (p.estado === 'rechazado') {
+        accionesHtml = `
+          <div class="resultado-final invalido visible" style="margin-top:0">
+            <span class="rf-icon">❌</span>
+            <p class="rf-title" style="color:#e24b4a">Pedido rechazado</p>
+            <p class="rf-desc">${p.motivoRechazo || 'Una de las firmas no es válida.'}</p>
+          </div>`;
+      }
+
+      document.getElementById('modal-body').innerHTML = `
+        ${bannerAlerta}
+        <div class="doc-section">
+          <div class="doc-section-title"><i class="ti ti-receipt"></i> Documento del pedido</div>
+          ${itemsHtml}
+          <div class="item-total"><span>Total</span><span>${formatoMXN(dv.importe)}</span></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+            <i class="ti ti-calendar" style="font-size:13px"></i> Entrega deseada: ${dv.fechaEntrega || '—'}
+          </div>
+        </div>
+        <div class="doc-section">
+          <div class="doc-section-title"><i class="ti ti-signature"></i> Firmas digitales</div>
+          ${fbCliente}
+          ${fbVendedor}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
+            <i class="ti ti-lock" style="font-size:12px"></i> SHA-256 firmado: ${p.firmaCliente.sha256Contenido.substring(0,32)}…
+          </div>
+        </div>
+        ${accionesHtml}
+        <div class="modal-actions" style="margin-top:4px">
+          <button class="btn btn-ghost" onclick="descargarDocumento()"><i class="ti ti-download"></i> Descargar documento firmado</button>
+        </div>
+      `;
+
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      pedidoActivo = null;
+    }
+
+    // ── VENDEDOR: verificar comparando contra TODOS los clientes ──────────
+    async function verificarComoVendedor() {
+      const p = pedidoActivo;
+      const setChk = (id, ok, txt) => {
+        const el = document.getElementById(id);
+        el.className = 'check-item ' + (ok ? 'check-ok' : 'check-fail');
+        el.innerHTML = `<i class="ti ${ok ? 'ti-circle-check' : 'ti-circle-x'}"></i> ${txt}`;
+      };
+
+      const clientes = Object.values(usersMap).filter(d => d.rol === 'cliente');
+      if (clientes.length === 0) { mostrarToast('No hay clientes registrados', 'error'); return; }
+
+      const cont = document.getElementById('comparacion-clientes');
+      cont.innerHTML = '<p class="empty-hint" style="text-align:left">Comparando firma contra ' + clientes.length + ' cliente(s)…</p>';
+
+      try {
+        let coincide = null;
+        const filas = [];
+        for (const datos of clientes) {
+          let valida = false;
+          try {
+            const lpub = await ECDSAEngine.importarLlavePublica(datos.llave_publica);
+            const r    = await ECDSAEngine.verificar(p.contenidoPedido, p.firmaCliente.firmaB64, lpub);
+            valida = r.valida;
+          } catch { valida = false; }
+          if (valida) coincide = datos.username;
+          const esDeclarado = datos.username === p.clienteUsername;
+          filas.push(`
+            <div class="cmp-row ${valida ? 'cmp-ok' : ''}">
+              <div class="cmp-left">
+                <i class="ti ${valida ? 'ti-circle-check' : 'ti-circle-x'}" style="color:${valida ? '#1eaa5a' : '#c0392b'}"></i>
+                <div>
+                  <div class="cmp-name">${datos.nombre} <span class="cmp-user">@${datos.username}</span></div>
+                  ${esDeclarado ? '<div class="cmp-tag">cliente declarado en el pedido</div>' : ''}
+                </div>
+              </div>
+              <span class="cmp-badge ${valida ? 'cb-ok' : 'cb-no'}">${valida ? 'Coincide' : 'No coincide'}</span>
+            </div>`);
+        }
+        cont.innerHTML = filas.join('');
+
+        const sha256Actual = await ECDSAEngine.sha256Hex(p.contenidoPedido);
+        const hashOk = sha256Actual === p.firmaCliente.sha256Contenido;
+        setChk('cv-hash', hashOk, hashOk ? 'Contenido íntegro ✓' : 'Hash NO coincide ✗ (alterado)');
+
+        const firmaValida  = coincide !== null;
+        const coincideQuien = coincide === p.clienteUsername;
+        setChk('cv-firma', firmaValida && coincideQuien,
+          !firmaValida ? 'Firma no válida para ningún cliente ✗'
+          : coincideQuien ? `Firma corresponde al cliente declarado ✓`
+          : `¡Alerta! La firma corresponde a otro cliente (@${coincide}) ✗`);
+
+        verifClienteOk = hashOk && firmaValida && coincideQuien;
+        const btn = document.getElementById('btn-contrafirma');
+        btn.disabled = !verifClienteOk;
+        btn.innerHTML = verifClienteOk
+          ? '<i class="ti ti-writing"></i> Avalar (contra-firmar)'
+          : '<i class="ti ti-lock"></i> Avalar (verifica primero)';
+
+        if (verifClienteOk) mostrarToast('Verificado: la firma es del cliente declarado ✓', 'success');
+        else if (firmaValida && !coincideQuien) mostrarToast('La firma NO corresponde al cliente declarado', 'error');
+        else if (!hashOk) mostrarToast('🚨 El documento fue alterado', 'error');
+        else mostrarToast('La firma del cliente NO es válida', 'error');
+      } catch(e) {
+        mostrarToast('Error al verificar: ' + (e.message||e), 'error');
+      }
+    }
+
+    async function contraFirmar() {
+      if (!verifClienteOk) { mostrarToast('Debes verificar la firma del cliente antes de avalar', 'warning'); return; }
+      const p = pedidoActivo;
+      try {
+        const lpriv = await ECDSAEngine.importarLlavePrivada(session.llavePrivadaB64);
+        const firmaVendedor = await ECDSAEngine.firmar(p.contenidoPedido, lpriv, 'vendedor-web');
+        await DB.actualizarPedido(p.folio, {
+          firma_vendedor: firmaVendedor,
+          vendedor_username: session.username,
+          vendedor_nombre:   session.nombre,
+          estado: 'firmado_vendedor',
+        });
+        mostrarToast('Pedido avalado y enviado al almacén ✓', 'success');
+        cerrarModal();
+        await recargar();
+      } catch(e) {
+        mostrarToast('Error al contra-firmar: ' + (e.message||e), 'error');
+      }
+    }
+
+    // ── ALMACÉN: verificar ambas firmas ───────────────────────────────────
+    async function verificarComoAlmacen() {
+      const p = pedidoActivo;
+      const cliente  = usersMap[p.clienteUsername];
+      const vendedor = usersMap[p.vendedorUsername];
+      if (!cliente || !vendedor) { mostrarToast('Faltan llaves públicas en el registro', 'error'); return; }
+
+      const setChk = (id, ok, txt) => {
+        const el = document.getElementById(id);
+        el.className = 'check-item ' + (ok ? 'check-ok' : 'check-fail');
+        el.innerHTML = `<i class="ti ${ok ? 'ti-circle-check' : 'ti-circle-x'}"></i> ${txt}`;
+      };
+
+      try {
+        const lpubC = await ECDSAEngine.importarLlavePublica(cliente.llave_publica);
+        const lpubV = await ECDSAEngine.importarLlavePublica(vendedor.llave_publica);
+        const resC = await ECDSAEngine.verificar(p.contenidoPedido, p.firmaCliente.firmaB64,  lpubC, p.firmaCliente.sha256Contenido);
+        const resV = await ECDSAEngine.verificar(p.contenidoPedido, p.firmaVendedor.firmaB64, lpubV, p.firmaVendedor.sha256Contenido);
+
+        setChk('ca-hashc',  resC.hashesCoinciden, resC.hashesCoinciden ? 'Hash cliente ✓'  : 'Hash cliente ✗');
+        setChk('ca-firmac', resC.valida,          resC.valida ? 'Firma cliente ✓'  : 'Firma cliente ✗');
+        setChk('ca-hashv',  resV.hashesCoinciden, resV.hashesCoinciden ? 'Hash vendedor ✓' : 'Hash vendedor ✗');
+        setChk('ca-firmav', resV.valida,          resV.valida ? 'Firma vendedor ✓' : 'Firma vendedor ✗');
+
+        const todoOk = resC.valida && resC.hashesCoinciden && resV.valida && resV.hashesCoinciden
+                       && resC.sha256Actual === resV.sha256Actual;
+
+        const rf = document.getElementById('rf-almacen');
+        rf.classList.add('visible');
+        if (todoOk) {
+          rf.className = 'resultado-final valido visible';
+          document.getElementById('rf-icon').textContent  = '✅';
+          document.getElementById('rf-title').textContent = 'Verificación correcta';
+          document.getElementById('rf-title').style.color = '#1eaa5a';
+          document.getElementById('rf-desc').textContent  = 'Ambas firmas son válidas y corresponden al mismo documento. Pedido autorizado para entrega.';
+          await DB.actualizarPedido(p.folio, { estado: 'entregado' });
+          document.getElementById('btn-verif-final').disabled = true;
+          mostrarToast('Pedido verificado y entregado ✓', 'success');
+          setTimeout(async () => { cerrarModal(); await recargar(); }, 1500);
+        } else {
+          const hashAlterado = !resC.hashesCoinciden || !resV.hashesCoinciden;
+          rf.className = 'resultado-final invalido visible';
+          document.getElementById('rf-icon').textContent  = '❌';
+          document.getElementById('rf-title').textContent = hashAlterado ? 'Documento alterado' : 'Verificación fallida';
+          document.getElementById('rf-title').style.color = '#e24b4a';
+          document.getElementById('rf-desc').textContent  = hashAlterado
+            ? 'El contenido del pedido fue modificado después de firmarse (el hash ya no coincide). NO entregar.'
+            : 'Alguna firma no es válida o no corresponde al firmante. NO entregar.';
+          await DB.actualizarPedido(p.folio, {
+            estado: 'rechazado',
+            motivo_rechazo: hashAlterado
+              ? 'Documento alterado: el hash no coincide con el firmado originalmente.'
+              : 'Verificación de firmas fallida en almacén.',
+          });
+          mostrarToast(hashAlterado ? '🚨 Documento alterado — pedido rechazado' : 'Verificación fallida — pedido rechazado', 'error');
+          setTimeout(async () => { cerrarModal(); await recargar(); }, 1900);
+        }
+      } catch(e) {
+        mostrarToast('Error al verificar: ' + (e.message||e), 'error');
+      }
+    }
+
+    function descargarDocumento() {
+      const p = pedidoActivo;
+      const doc = {
+        documento: 'pedido_firmado', folio: p.folio,
+        contenidoPedido: p.contenidoPedido,
+        firmaCliente: p.firmaCliente, firmaVendedor: p.firmaVendedor,
+        estado: p.estado, clienteUsername: p.clienteUsername, vendedorUsername: p.vendedorUsername,
+      };
+      ECDSAEngine.descargarTexto(JSON.stringify(doc, null, 2), `documento_${p.folio}.json`);
+      mostrarToast('Documento descargado', 'success');
+    }
+
+    // ── Verificación de integridad (al abrir cualquier pedido) ────────────
+    async function verificarIntegridad(p) {
+      const out = { hashOk: false, clienteOk: false, vendedorOk: null, alterado: true };
+      try {
+        const shaActual = await ECDSAEngine.sha256Hex(p.contenidoPedido);
+        out.hashOk = shaActual === p.firmaCliente.sha256Contenido;
+
+        const cli = usersMap[p.clienteUsername];
+        if (cli && cli.llave_publica) {
+          const lpub = await ECDSAEngine.importarLlavePublica(cli.llave_publica);
+          const r    = await ECDSAEngine.verificar(p.contenidoPedido, p.firmaCliente.firmaB64, lpub);
+          out.clienteOk = r.valida;
+        }
+        if (p.firmaVendedor && p.vendedorUsername) {
+          const ven = usersMap[p.vendedorUsername];
+          if (ven && ven.llave_publica) {
+            const lpubV = await ECDSAEngine.importarLlavePublica(ven.llave_publica);
+            const rv    = await ECDSAEngine.verificar(p.contenidoPedido, p.firmaVendedor.firmaB64, lpubV);
+            out.vendedorOk = rv.valida;
+          }
+        }
+      } catch {}
+      out.alterado = !out.hashOk || !out.clienteOk || (out.vendedorOk === false);
+      return out;
+    }
+
+    function mostrarToast(msg, tipo = 'info') {
+      const icons  = { success:'ti-circle-check', error:'ti-alert-circle', warning:'ti-alert-triangle', info:'ti-info-circle' };
+      const colors = { success:'#1eaa5a', error:'#e24b4a', warning:'#f07820', info:'var(--blue)' };
+      const t = document.createElement('div');
+      t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:#fff;border:1px solid var(--border-light);border-left:4px solid ${colors[tipo]};border-radius:var(--radius-md);padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;font-family:var(--font-sans);color:var(--text-dark);box-shadow:0 8px 32px rgba(0,0,0,0.12);animation:fadeUp 0.3s ease;max-width:320px`;
+      t.innerHTML = `<i class="ti ${icons[tipo]}" style="color:${colors[tipo]};font-size:18px;flex-shrink:0"></i><span>${msg}</span>`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

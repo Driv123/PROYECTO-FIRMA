@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sniffer (demo de seguridad) — VerifySign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; background: #0b1020; color: #d6e0f5; }
+    .page-main { padding: 20px 24px 40px; flex: 1; }
+    .mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+    .sniffer-head {
+      background: linear-gradient(135deg, #1a0e1e 0%, #2b0f1a 60%, #3a1020 100%);
+      border: 1px solid #5a2030; border-radius: var(--radius-lg);
+      padding: 24px; margin-bottom: 22px; position: relative; overflow: hidden;
+    }
+    .sniffer-head::before {
+      content: ''; position: absolute; right: -40px; top: -40px;
+      width: 160px; height: 160px; border-radius: 50%; background: rgba(226,75,74,0.08);
+    }
+    .sniffer-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #ff6b6b; text-transform: uppercase; margin-bottom: 8px; }
+    .sniffer-head h1 { font-family: var(--font-display); font-size: 24px; color: #fff; margin-bottom: 8px; }
+    .sniffer-head p { font-size: 13px; color: #b9c4dd; line-height: 1.6; }
+    .sniffer-pills { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .sniffer-pill { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: #ff9b9b; border-radius: 20px; padding: 5px 12px; font-size: 11px; }
+
+    .panel {
+      background: #111831; border: 1px solid #1f2b4d;
+      border-radius: var(--radius-md); padding: 18px; margin-bottom: 16px;
+    }
+    .panel-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .panel-title i { color: #ff6b6b; font-size: 17px; }
+
+    /* lista de pedidos capturados */
+    .cap-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: #0c1226; border: 1px solid #1f2b4d; border-radius: var(--radius-sm);
+      padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s;
+    }
+    .cap-row:hover { border-color: #ff6b6b; }
+    .cap-row.sel { border-color: #ff6b6b; background: #15102a; }
+    .cap-folio { font-weight: 700; color: #fff; font-size: 14px; }
+    .cap-meta { font-size: 11px; color: #7e8bb0; margin-top: 2px; }
+    .cap-imp { font-weight: 800; color: #ffd479; font-family: var(--font-display); }
+
+    .empty-state { text-align: center; padding: 40px; color: #6b779c; }
+    .empty-state i { font-size: 40px; display: block; margin-bottom: 12px; color: #2f3c63; }
+
+    /* documento capturado */
+    .doc-field {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+      padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 6px;
+      font-size: 12px; background: #0c1226; border: 1px solid #1f2b4d;
+    }
+    .df-key { color: #7e8bb0; flex-shrink: 0; }
+    .df-val { color: #d6e0f5; text-align: right; word-break: break-all; }
+    .df-val.readable { color: #7fe0a8; }
+    .doc-field.cifrado { background: #1a1023; border-color: #4a2540; }
+    .doc-field.cifrado .df-val { color: #ff9b9b; }
+    .lock-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; color: #ff6b6b; }
+
+    .cipher-blob {
+      background: #0a0712; border: 1px solid #4a2540; border-radius: 6px;
+      padding: 10px; font-size: 11px; color: #ff9b9b; line-height: 1.7;
+      word-break: break-all; max-height: 110px; overflow-y: auto;
+    }
+
+    .btn-hack {
+      background: #2a1420; border: 1px solid #5a2030; color: #ff9b9b;
+      border-radius: var(--radius-sm); padding: 9px 14px; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: var(--font-sans); display: inline-flex; align-items: center; gap: 6px;
+      transition: all .2s;
+    }
+    .btn-hack:hover { background: #3a1a2a; border-color: #ff6b6b; }
+    .btn-hack:disabled { opacity: .4; cursor: not-allowed; }
+
+    .tamper-grid { display: flex; flex-direction: column; gap: 10px; }
+    .tamper-item { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .tamper-item label { font-size: 12px; color: #b9c4dd; min-width: 130px; }
+    .tamper-item input, .tamper-item select {
+      background: #0c1226; border: 1px solid #1f2b4d; color: #fff;
+      border-radius: var(--radius-sm); padding: 7px 10px; font-size: 13px; outline: none;
+      font-family: var(--font-sans);
+    }
+    .tamper-item input:focus, .tamper-item select:focus { border-color: #ff6b6b; }
+
+    .verif-result {
+      border-radius: var(--radius-md); padding: 18px; text-align: center; margin-top: 14px; display: none;
+    }
+    .verif-result.show { display: block; animation: fadeUp .4s ease; }
+    .verif-result.alterado { background: rgba(226,75,74,0.12); border: 1.5px solid #e24b4a; }
+    .verif-result.intacto  { background: rgba(30,170,90,0.12); border: 1.5px solid #1eaa5a; }
+    .vr-icon { font-size: 38px; display: block; margin-bottom: 8px; }
+    .vr-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+    .vr-title.alterado { color: #ff6b6b; } .vr-title.intacto { color: #6ee7a8; }
+    .vr-desc { font-size: 12px; color: #b9c4dd; line-height: 1.5; }
+    .vr-detail { font-size: 11px; color: #8896bd; margin-top: 8px; text-align: left; background: #0c1226; border-radius: var(--radius-sm); padding: 10px 12px; }
+
+    .info-line { font-size: 11px; color: #7e8bb0; line-height: 1.6; margin-top: 10px; }
+    .info-line i { color: #ffd479; }
+
+    .topbar { background: #0c1226; border-bottom: 1px solid #1f2b4d; }
+    .topbar-title { color: #fff; }
+    .back-link { color: #7e8bb0; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .back-link:hover { color: #ff6b6b; }
+
+    .decrypt-out {
+      margin-top: 10px; background: #0c1226; border: 1px solid #1f2b4d;
+      border-radius: var(--radius-sm); padding: 12px; font-size: 12px; display: none;
+    }
+    .decrypt-out.show { display: block; animation: fadeUp .3s ease; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo" style="background:linear-gradient(135deg,#e24b4a,#a02030)"><i class="ti ti-wifi"></i></div>
+      <span class="topbar-title">Sniffer · Demo de seguridad</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="index.html" class="back-link"><i class="ti ti-arrow-left"></i> Volver al sistema</a>
+    </div>
+  </div>
+
+  <main class="page-main">
+
+    <div class="sniffer-head">
+      <p class="sniffer-eyebrow"><i class="ti ti-eye"></i> Interceptor de red (simulado)</p>
+      <h1>¿Qué ve un atacante que intercepta el pedido?</h1>
+      <p>Este sniffer captura el <strong>documento firmado</strong> mientras "viaja" entre el cliente, el vendedor y el almacén. Demuestra dos cosas: que los datos sensibles (nombre y usuario) van <strong>cifrados</strong> y no se pueden leer, y que si el atacante <strong>modifica</strong> el pedido, la verificación de firma lo detecta como alterado.</p>
+      <div class="sniffer-pills">
+        <span class="sniffer-pill"><i class="ti ti-lock"></i> Confidencialidad: AES-GCM</span>
+        <span class="sniffer-pill"><i class="ti ti-shield"></i> Integridad: ECDSA</span>
+      </div>
+    </div>
+
+    <!-- TRÁFICO CAPTURADO -->
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-broadcast"></i> Tráfico capturado (pedidos en el sistema)</div>
+      <div id="lista-capturas"></div>
+    </div>
+
+    <!-- INSPECTOR -->
+    <div id="inspector" style="display:none">
+
+      <div class="panel">
+        <div class="panel-title"><i class="ti ti-file-search"></i> Paquete interceptado: <span id="insp-folio" class="mono" style="color:#ffd479"></span></div>
+
+        <div style="font-size:11px;color:#7e8bb0;margin-bottom:10px">Contenido EXACTO del documento firmado que viaja por la red (texto crudo sobre el que se calcula la firma):</div>
+        <div class="cipher-blob mono" id="contenido-crudo" style="border-color:#1f2b4d;background:#0a0712;color:#9bb0d8;max-height:200px"></div>
+
+        <div style="font-size:11px;color:#7e8bb0;margin:14px 0 10px">Datos sensibles del cliente almacenados en la base de datos (tarjeta y RFC):</div>
+        <div id="doc-fields"></div>
+
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-hack" onclick="intentarDescifrar()"><i class="ti ti-lock-open"></i> Intentar descifrar tarjeta y RFC</button>
+        </div>
+        <div class="decrypt-out" id="decrypt-out"></div>
+      </div>
+
+      <!-- ATAQUE DE MODIFICACIÓN -->
+      <div class="panel">
+        <div class="panel-title"><i class="ti ti-edit-circle"></i> Intento de modificación (ataque de integridad)</div>
+        <div style="font-size:11px;color:#7e8bb0;margin-bottom:14px">Edita directamente el texto crudo del documento (como haría un atacante en la red). Luego verifica o inyecta a la base de datos.</div>
+
+        <textarea id="editor-crudo" spellcheck="false"
+          style="width:100%;min-height:200px;background:#0a0712;border:1px solid #4a2540;border-radius:8px;color:#ffd0d0;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;padding:12px;outline:none;resize:vertical"></textarea>
+
+        <div class="tamper-grid" style="margin-top:12px">
+          <div class="tamper-item">
+            <label><i class="ti ti-currency-peso"></i> Atajo: importe a</label>
+            <input type="number" id="tmp-importe" placeholder="99999"/>
+            <button class="btn-hack" onclick="alterarImporte()"><i class="ti ti-pencil"></i> Aplicar al texto</button>
+          </div>
+          <div class="tamper-item">
+            <label><i class="ti ti-signature"></i> Sabotear la firma:</label>
+            <button class="btn-hack" onclick="alterarFirma()"><i class="ti ti-bug"></i> Corromper firma del cliente</button>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-hack" onclick="reiniciarAlteracion()"><i class="ti ti-restore"></i> Restaurar original</button>
+          <button class="btn-hack" style="background:#1a2440;border-color:#3873ff;color:#9bc0ff" onclick="verificarComoSistema()"><i class="ti ti-shield-check"></i> Verificar (como el sistema)</button>
+          <button class="btn-hack" style="background:#2a1420;border-color:#ff6b6b;color:#ff9b9b" onclick="inyectarAlSistema()"><i class="ti ti-arrow-back-up"></i> Inyectar a la base de datos (tiempo real)</button>
+        </div>
+
+        <div class="verif-result" id="verif-result">
+          <span class="vr-icon" id="vr-icon"></span>
+          <p class="vr-title" id="vr-title"></p>
+          <p class="vr-desc" id="vr-desc"></p>
+          <div class="vr-detail mono" id="vr-detail"></div>
+        </div>
+
+        <div class="info-line">
+          <i class="ti ti-info-circle"></i> Al inyectar, el cambio se escribe en Supabase y el vendedor/almacén lo verán al instante (Realtime). La tarjeta y el RFC se cifran con ECIES (ECDH P-256 + AES-GCM); sin la llave privada del sistema el sniffer no puede leerlos.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="site-footer" style="background:#0c1226;border-color:#1f2b4d">
+    <span class="footer-copy" style="color:#6b779c">VerifySign — Demo de sniffer / MITM</span>
+    <div class="footer-socials"><i class="ti ti-shield-lock" style="color:#3a4a6b"></i></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/ecdsa-engine.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    const session = JSON.parse(localStorage.getItem('vs_session') || 'null');
+    if (!session) { window.location.href = 'login.html'; }
+
+    let usersMap = {};
+    let pedidoSel = null;       // pedido (mapeado) seleccionado
+    let contenidoOriginal = ''; // string crudo original (fuente de verdad)
+    let firmaOriginalB64 = '';  // firma original
+
+    async function init() {
+      try {
+        const arr = await DB.getTodosUsuarios();
+        usersMap = {}; arr.forEach(u => usersMap[u.username] = u);
+      } catch {}
+
+      try {
+        const rows = await DB.getPedidos();
+        const cont = document.getElementById('lista-capturas');
+        if (!rows || rows.length === 0) {
+          cont.innerHTML = `<div class="empty-state"><i class="ti ti-broadcast-off"></i><p>No hay tráfico capturado. Crea un pedido como cliente primero.</p></div>`;
+          return;
+        }
+        cont.innerHTML = rows.map(r => {
+          const p = mapPedido(r);
+          let totalPaq = 0, nItems = 0;
+          try { const d = JSON.parse(p.contenidoPedido); totalPaq = (d.items||[]).reduce((s,i)=>s+(i.cantidad||0),0); nItems=(d.items||[]).length; } catch {}
+          return `<div class="cap-row" id="cap-${p.folio}" onclick="seleccionar('${p.folio}')">
+            <div>
+              <div class="cap-folio mono">${p.folio}${p.intervenido?' ⚠':''}</div>
+              <div class="cap-meta">${nItems} productos · ${totalPaq} paquetes · estado: ${p.estado}</div>
+            </div>
+            <div class="cap-imp">${formatoMXN(p.importe)}</div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('lista-capturas').innerHTML =
+          `<div class="empty-state"><i class="ti ti-cloud-off"></i><p>No se pudo conectar a la base de datos.<br><span style="font-size:12px">${e.message||e}</span></p></div>`;
+      }
+    }
+
+    async function seleccionar(folio) {
+      const row = await DB.getPedido(folio);
+      if (!row) return;
+      pedidoSel = mapPedido(row);
+      document.querySelectorAll('.cap-row').forEach(r => r.classList.remove('sel'));
+      const el = document.getElementById('cap-' + folio); if (el) el.classList.add('sel');
+
+      contenidoOriginal = pedidoSel.contenidoPedido;
+      firmaOriginalB64  = pedidoSel.firmaCliente.firmaB64;
+
+      document.getElementById('insp-folio').textContent = pedidoSel.folio;
+      document.getElementById('inspector').style.display = 'block';
+      document.getElementById('verif-result').classList.remove('show');
+      document.getElementById('decrypt-out').classList.remove('show');
+
+      // Mostrar contenido crudo (solo lectura) y editable
+      document.getElementById('contenido-crudo').textContent = contenidoOriginal;
+      document.getElementById('editor-crudo').value = contenidoOriginal;
+
+      renderDatosCliente();
+      document.getElementById('inspector').scrollIntoView({ behavior:'smooth' });
+    }
+
+    // Muestra la tarjeta y RFC CIFRADOS del cliente (tomados de la BD)
+    function renderDatosCliente() {
+      const cli = usersMap[pedidoSel.clienteUsername];
+      const cont = document.getElementById('doc-fields');
+      if (!cli) { cont.innerHTML = '<p style="color:#7e8bb0;font-size:12px">Cliente no encontrado en la BD.</p>'; return; }
+
+      const blob = (label, obj) => {
+        if (!obj) return `<div class="doc-field"><span class="df-key">${label}</span><span class="df-val">— (no aplica)</span></div>`;
+        return `<div class="doc-field cifrado" style="flex-direction:column;align-items:stretch">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span class="df-key">${label} <span class="lock-badge"><i class="ti ti-lock"></i> ECIES</span></span>
+            <span style="font-size:10px;color:#ff6b6b">visible pero ilegible</span>
+          </div>
+          <div class="cipher-blob mono">epk: ${obj.epk ? obj.epk.substring(0,52)+'…' : '—'}<br>iv : ${obj.iv}<br>ct : ${obj.ct}</div>
+        </div>`;
+      };
+
+      cont.innerHTML = `
+        <div class="doc-field"><span class="df-key">cliente (username)</span><span class="df-val readable mono">@${cli.username}</span></div>
+        <div class="doc-field"><span class="df-key">nombre</span><span class="df-val readable">${cli.nombre}</span></div>
+        ${blob('tarjeta_cifrada', cli.tarjeta_cifrada)}
+        ${blob('rfc_cifrado', cli.rfc_cifrado)}
+        <div class="doc-field"><span class="df-key">direccion <span style="color:#6ee7a8;font-size:10px">(en claro)</span></span><span class="df-val readable">${cli.direccion || '—'}</span></div>
+      `;
+    }
+
+    // ── Intentar descifrar SIN la clave privada del sistema ───────────────
+    async function intentarDescifrar() {
+      const out = document.getElementById('decrypt-out');
+      out.classList.add('show');
+      const cli = usersMap[pedidoSel.clienteUsername];
+      if (!cli || !cli.tarjeta_cifrada) { out.innerHTML = '<span style="color:#7e8bb0">Este cliente no tiene datos cifrados.</span>'; return; }
+
+      out.innerHTML = '<span style="color:#7e8bb0">Intentando descifrar con una llave privada que el atacante NO posee…</span>';
+      try {
+        // El sniffer genera un par ECDH propio (no es el del sistema)
+        const atacante = await ECDSAEngine.generarLlavesECDH();
+        await ECDSAEngine.descifrarECIES(cli.tarjeta_cifrada, atacante.privB64);
+        out.innerHTML = '<span style="color:#ff6b6b">¡Descifrado! (no debería ocurrir)</span>';
+      } catch {
+        out.innerHTML = `
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <i class="ti ti-lock" style="color:#ff6b6b;font-size:22px"></i>
+            <div>
+              <div style="color:#ff9b9b;font-weight:700;margin-bottom:4px">No fue posible descifrar</div>
+              <div style="color:#b9c4dd;line-height:1.5">La tarjeta y el RFC están cifrados con ECIES hacia la llave pública del sistema. Sin la llave PRIVADA del sistema, el sniffer solo ve el texto cifrado. <strong>Confidencialidad preservada.</strong></div>
+            </div>
+          </div>`;
+      }
+    }
+
+    // ── Atajos de alteración (operan sobre el TEXTO del editor) ───────────
+    function alterarImporte() {
+      const v = document.getElementById('tmp-importe').value.trim();
+      if (!v) { toast('Ingresa un importe'); return; }
+      let txt = document.getElementById('editor-crudo').value;
+      // Reemplaza el primer "importe": <num> por el nuevo valor (string replace, sin re-serializar)
+      const nuevo = txt.replace(/("importe":\s*)\d+(\.\d+)?/, `$1${v}`);
+      if (nuevo === txt) { toast('No se encontró el campo importe'); return; }
+      document.getElementById('editor-crudo').value = nuevo;
+      toast('Importe modificado en el texto. Verifica o inyecta.');
+    }
+    function alterarFirma() {
+      // Corromper la firma: voltear unos caracteres
+      let f = firmaOriginalB64.split('');
+      for (let i = 10; i < 16 && i < f.length; i++) f[i] = f[i] === 'A' ? 'B' : 'A';
+      firmaSaboteada = f.join('');
+      toast('Firma del cliente corrompida (se usará al verificar/inyectar)');
+    }
+    let firmaSaboteada = null;
+
+    function reiniciarAlteracion() {
+      document.getElementById('editor-crudo').value = contenidoOriginal;
+      firmaSaboteada = null;
+      document.getElementById('verif-result').classList.remove('show');
+      toast('Documento restaurado al original');
+    }
+
+    // ── Verificar como lo haría el sistema ────────────────────────────────
+    async function verificarComoSistema() {
+      const contenidoAlterado = document.getElementById('editor-crudo').value;
+      const firmaUsar = firmaSaboteada || firmaOriginalB64;
+
+      const shaActual = await ECDSAEngine.sha256Hex(contenidoAlterado);
+      const shaOriginal = pedidoSel.firmaCliente.sha256Contenido;
+      const hashCoincide = shaActual === shaOriginal;
+
+      // Verificar firma contra TODAS las llaves públicas de clientes
+      let firmaValida = false;
+      for (const u of Object.values(usersMap)) {
+        if (u.rol !== 'cliente') continue;
+        try {
+          const lpub = await ECDSAEngine.importarLlavePublica(u.llave_publica);
+          const r = await ECDSAEngine.verificar(contenidoAlterado, firmaUsar, lpub);
+          if (r.valida) { firmaValida = true; break; }
+        } catch {}
+      }
+
+      const intacto = hashCoincide && firmaValida;
+      const rf = document.getElementById('verif-result');
+      rf.classList.add('show');
+      rf.className = 'verif-result show ' + (intacto ? 'intacto' : 'alterado');
+      document.getElementById('vr-icon').textContent = intacto ? '🔒' : '🚨';
+      document.getElementById('vr-title').className = 'vr-title ' + (intacto ? 'intacto' : 'alterado');
+      document.getElementById('vr-title').textContent = intacto ? 'Documento íntegro' : 'DOCUMENTO ALTERADO';
+      document.getElementById('vr-desc').textContent = intacto
+        ? 'No se modificó nada (o se restauró exactamente): la firma es válida y el hash coincide.'
+        : 'La verificación ECDSA detectó la manipulación. El sistema rechazaría este pedido.';
+      document.getElementById('vr-detail').innerHTML = `
+        SHA-256 original : ${shaOriginal.substring(0,44)}…<br>
+        SHA-256 actual&nbsp;&nbsp;: ${shaActual.substring(0,44)}…<br>
+        ¿Hash coincide?&nbsp;&nbsp;: ${hashCoincide ? 'SÍ' : 'NO ✗'}<br>
+        ¿Firma válida?&nbsp;&nbsp;&nbsp;: ${firmaValida ? 'SÍ' : 'NO ✗'}`;
+      toast(intacto ? 'Documento íntegro' : 'Alteración detectada 🚨');
+    }
+
+    // ── Inyectar a la base de datos (Supabase) ────────────────────────────
+    async function inyectarAlSistema() {
+      const contenidoAlterado = document.getElementById('editor-crudo').value;
+      const firmaUsar = firmaSaboteada || firmaOriginalB64;
+      try {
+        await DB.actualizarPedido(pedidoSel.folio, {
+          contenido_pedido: contenidoAlterado,
+          firma_cliente: { ...pedidoSel.firmaCliente, firmaB64: firmaUsar },
+          intervenido: true,
+        });
+        toast('Inyectado a Supabase. El vendedor/almacén lo verán alterado en tiempo real.');
+      } catch (e) {
+        toast('Error al inyectar: ' + (e.message||e));
+      }
+    }
+
+    function toast(msg) {
+      const t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#15102a;border:1px solid #5a2030;border-left:4px solid #ff6b6b;border-radius:10px;padding:12px 16px;font-size:13px;color:#ffd0d0;box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:340px;font-family:var(--font-sans)';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

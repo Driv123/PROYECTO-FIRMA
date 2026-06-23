@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VerifySign — Inicio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .hero {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 60%, var(--violet) 100%);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative; overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+    .hero::before {
+      content:''; position:absolute; right:-50px; top:-50px;
+      width:200px; height:200px; border-radius:50%;
+      background:rgba(255,255,255,0.07);
+    }
+    .hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .user-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.15); border-radius: 20px;
+      padding: 6px 14px; font-size: 12px; color: #fff;
+    }
+    .user-pill i { font-size: 15px; }
+    .role-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+    .rb-cliente  { background: rgba(56,115,255,0.25); color: #aac5ff; }
+    .rb-vendedor { background: rgba(240,120,32,0.25); color: #ffc48a; }
+    .rb-almacen  { background: rgba(30,170,90,0.25);  color: #7feab0; }
+
+    .hero h1 {
+      font-family: var(--font-display); font-size: 24px; font-weight: 800;
+      color: #fff; margin-bottom: 6px; line-height: 1.2;
+    }
+    .hero p { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 16px; }
+    .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hero-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.13); border-radius: 20px;
+      padding: 5px 12px; font-size: 11px; color: rgba(255,255,255,0.9);
+    }
+
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px;
+    }
+
+    .menu-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+    .menu-card {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--bg-white); border-radius: var(--radius-lg);
+      padding: 18px 20px; border: 1px solid var(--border-light);
+      cursor: pointer; text-decoration: none;
+      transition: box-shadow 0.25s, transform 0.15s, border-color 0.2s;
+      animation: fadeUp 0.5s ease both;
+    }
+    .menu-card:hover { box-shadow: var(--shadow-card); transform: translateY(-2px); border-color: var(--border-input); }
+    .menu-card.disabled { opacity: 0.4; pointer-events: none; }
+
+    .menu-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .menu-icon i { font-size: 23px; }
+    .si-blue   { background: #edf2ff; color: var(--blue); }
+    .si-orange { background: #fff3e8; color: #f07820; }
+    .si-green  { background: #eafaf0; color: #1eaa5a; }
+    .si-violet { background: #f3f0ff; color: var(--violet); }
+    .menu-text { flex: 1; }
+    .menu-label { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+    .menu-desc  { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+    .menu-arrow i { font-size: 18px; color: #c8d4ee; }
+
+    .info-card {
+      background: var(--bg-white); border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+    .info-card-title {
+      font-size: 13px; font-weight: 700; color: var(--text-dark);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .info-card-title i { color: var(--blue); font-size: 17px; }
+    .flow-steps { display: flex; flex-direction: column; gap: 0; }
+    .flow-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .flow-item:last-child { border-bottom: none; }
+    .flow-num {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .fn-blue   { background: #edf2ff; color: var(--blue); }
+    .fn-orange { background: #fff3e8; color: #f07820; }
+    .fn-green  { background: #eafaf0; color: #1eaa5a; }
+    .flow-item-title { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+    .flow-item-desc  { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+    .key-card {
+      background: var(--bg-white); border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg); padding: 18px; margin-bottom: 24px;
+    }
+    .key-card-title { font-size: 13px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .key-card-title i { color: #1eaa5a; }
+    .key-box {
+      background: var(--bg-form); border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      font-family: monospace; font-size: 10px; color: var(--text-mid);
+      word-break: break-all; line-height: 1.6; max-height: 60px; overflow-y: auto;
+    }
+    .key-label { font-size: 11px; font-weight: 700; color: var(--text-label); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; margin-top: 10px; }
+
+    .topbar-user { display: flex; align-items: center; gap: 10px; }
+    .topbar-username { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+    .topbar-role { font-size: 11px; color: var(--text-muted); }
+    .btn-logout {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-sm); padding: 6px 12px;
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #ffc5c5; color: #d93025; background: #fff0f0; }
+
+    .page-main { padding: 24px 28px; flex: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo"><i class="ti ti-shield-check"></i></div>
+      <span class="topbar-title">VerifySign</span>
+    </div>
+    <div class="topbar-actions">
+      <div class="topbar-user">
+        <div>
+          <div class="topbar-username" id="tb-nombre">—</div>
+          <div class="topbar-role" id="tb-rol">—</div>
+        </div>
+        <div class="topbar-avatar"><i class="ti ti-user"></i></div>
+      </div>
+      <button class="btn-logout" onclick="cerrarSesion()">
+        <i class="ti ti-logout"></i> Salir
+      </button>
+    </div>
+  </div>
+
+  <main class="page-main">
+
+    <div class="hero">
+      <div class="hero-top">
+        <div class="user-pill" id="hero-userpill">
+          <i class="ti ti-user-circle"></i>
+          <span id="hero-username">—</span>
+        </div>
+        <div class="role-badge" id="hero-rolebadge"></div>
+      </div>
+      <h1 id="hero-title">Bienvenido</h1>
+      <p id="hero-desc">Cargando...</p>
+      <div class="hero-pills">
+        <span class="hero-pill"><i class="ti ti-lock"></i> ECDSA + SHA-256</span>
+        <span class="hero-pill"><i class="ti ti-cpu"></i> Web Crypto API</span>
+        <span class="hero-pill"><i class="ti ti-shield"></i> P-256 / secp256r1</span>
+      </div>
+    </div>
+
+    <!-- Llave pública del usuario -->
+    <div class="key-card" id="key-card">
+      <div class="key-card-title"><i class="ti ti-key"></i> Tu llave pública registrada</div>
+      <div class="key-label">Llave Pública (SPKI · Base64)</div>
+      <div class="key-box" id="pub-key-display">—</div>
+    </div>
+
+    <p class="section-label" id="section-label">Acciones disponibles</p>
+    <div class="menu-grid" id="menu-grid">
+      <!-- Se genera dinámicamente según rol -->
+    </div>
+
+    <p class="section-label">Herramientas de demostración</p>
+    <div class="menu-grid" style="margin-bottom:24px">
+      <a class="menu-card" href="sniffer.html" style="border-color:#f3c0c0">
+        <div class="menu-icon" style="background:#fff0f0;color:#e24b4a"><i class="ti ti-wifi"></i></div>
+        <div class="menu-text">
+          <p class="menu-label">Simulador de sniffer</p>
+          <p class="menu-desc">Mira qué ve un atacante: datos cifrados ilegibles e intentos de alterar el pedido detectados por la firma</p>
+        </div>
+        <div class="menu-arrow"><i class="ti ti-chevron-right"></i></div>
+      </a>
+      <a class="menu-card" href="descifrar.html" style="border-color:#a3e9c0">
+        <div class="menu-icon" style="background:#eafaf0;color:#1eaa5a"><i class="ti ti-lock-open"></i></div>
+        <div class="menu-text">
+          <p class="menu-label">Descifrador ECIES</p>
+          <p class="menu-desc">Demuestra que el sistema descifra los datos sensibles (tarjeta y RFC) con la llave privada del sistema</p>
+        </div>
+        <div class="menu-arrow"><i class="ti ti-chevron-right"></i></div>
+      </a>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-title"><i class="ti ti-route"></i> Flujo del proceso</div>
+      <div class="flow-steps">
+        <div class="flow-item">
+          <div class="flow-num fn-blue">1</div>
+          <div class="flow-item-body">
+            <p class="flow-item-title">Cliente — Firma el pedido</p>
+            <p class="flow-item-desc">El cliente describe su pedido y lo firma con su llave privada. La firma garantiza que él lo envió (no repudio).</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num fn-orange">2</div>
+          <div class="flow-item-body">
+            <p class="flow-item-title">Vendedor — Verifica y contra-firma</p>
+            <p class="flow-item-desc">El vendedor verifica la firma del cliente y añade la suya propia, avalando el pedido y no pudiendo registrarlo a nombre de otro vendedor.</p>
+          </div>
+        </div>
+        <div class="flow-item">
+          <div class="flow-num fn-green">3</div>
+          <div class="flow-item-body">
+            <p class="flow-item-title">Almacén — Verifica ambas firmas y entrega</p>
+            <p class="flow-item-desc">El almacén verifica matemáticamente las dos firmas contra las llaves públicas registradas, confirmando autenticidad e integridad antes de entregar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <span class="footer-copy">VerifySign — ECDSA P-256 + SHA-256</span>
+    <div class="footer-socials">
+      <i class="ti ti-brand-github"></i>
+      <i class="ti ti-shield-lock"></i>
+    </div>
+  </footer>
+
+  <script>
+    const session = JSON.parse(localStorage.getItem('vs_session') || 'null');
+    if (!session) { window.location.href = 'login.html'; }
+
+    const ROL_CONFIG = {
+      cliente: {
+        badge: 'rb-cliente',
+        icon: 'ti-shopping-cart',
+        title: 'Panel del Cliente',
+        desc: 'Crea y firma tus pedidos digitalmente. Tu firma garantiza autenticidad y no repudio.',
+        menus: [
+          { href: 'firmar-pedido.html', icon: 'ti-shopping-cart', iconCls: 'si-orange', label: 'Nuevo pedido', desc: 'Elige paquetes de refresco y firma el pedido con tu llave privada' },
+          { href: 'pedidos.html',       icon: 'ti-list-check', iconCls: 'si-green', label: 'Mis pedidos', desc: 'Consulta tus pedidos y su estado de verificación' },
+        ]
+      },
+      vendedor: {
+        badge: 'rb-vendedor',
+        icon: 'ti-briefcase',
+        title: 'Panel del Vendedor',
+        desc: 'Verifica pedidos de clientes y añade tu contra-firma para avalar la operación.',
+        menus: [
+          { href: 'pedidos.html', icon: 'ti-list-check', iconCls: 'si-orange', label: 'Pedidos por avalar', desc: 'Revisa los pedidos firmados por clientes, verifica y contra-firma' },
+        ]
+      },
+      almacen: {
+        badge: 'rb-almacen',
+        icon: 'ti-building-warehouse',
+        title: 'Panel del Almacén',
+        desc: 'Verifica ambas firmas del pedido antes de proceder a la entrega.',
+        menus: [
+          { href: 'pedidos.html', icon: 'ti-list-check', iconCls: 'si-green', label: 'Pedidos para entrega', desc: 'Revisa los pedidos doble-firmados, verifica ambas firmas y entrega' },
+        ]
+      }
+    };
+
+    function renderDashboard() {
+      const cfg = ROL_CONFIG[session.rol] || ROL_CONFIG.cliente;
+
+      document.getElementById('tb-nombre').textContent = session.nombre;
+      document.getElementById('tb-rol').textContent = session.rol.charAt(0).toUpperCase() + session.rol.slice(1);
+
+      document.getElementById('hero-username').textContent = session.nombre;
+      document.getElementById('hero-title').textContent = cfg.title;
+      document.getElementById('hero-desc').textContent = cfg.desc;
+
+      const badge = document.getElementById('hero-rolebadge');
+      badge.className = 'role-badge ' + cfg.badge;
+      badge.innerHTML = `<i class="ti ${cfg.icon}"></i> ${session.rol}`;
+
+      document.getElementById('pub-key-display').textContent = session.llavePublicaB64 || '—';
+
+      const grid = document.getElementById('menu-grid');
+      grid.innerHTML = cfg.menus.map((m, i) => `
+        <a class="menu-card" href="${m.href}" style="animation-delay:${0.05*(i+1)}s">
+          <div class="menu-icon ${m.iconCls}"><i class="ti ${m.icon}"></i></div>
+          <div class="menu-text">
+            <p class="menu-label">${m.label}</p>
+            <p class="menu-desc">${m.desc}</p>
+          </div>
+          <div class="menu-arrow"><i class="ti ti-chevron-right"></i></div>
+        </a>
+      `).join('');
+    }
+
+    function cerrarSesion() {
+      localStorage.removeItem('vs_session');
+      window.location.href = 'login.html';
+    }
+
+    renderDashboard();
+  </script>
+</body>
+</html>

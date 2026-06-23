@@ -1,0 +1,51 @@
+/* ═══════════════════════════════════════
+   VARIABLES GLOBALES — App Mezcalero
+   ═══════════════════════════════════════ */
+:root {
+  /* Paleta principal */
+  --blue:        #3873ff;
+  --blue-dark:   #1b3da8;
+  --blue-mid:    #2a5298;
+  --violet:      #6440f5;
+  --violet-soft: #a78bfa;
+
+  /* Fondos */
+  --bg-dark:      #060c1d;
+  --bg-surface:   #0e1628;
+  --bg-light:     #f0f4ff;
+  --bg-white:     #ffffff;
+  --bg-form:      #f5f7ff;
+
+  /* Bordes */
+  --border-dark:  #1e2d4a;
+  --border-light: #dce5ff;
+  --border-input: #c8d8f0;
+
+  /* Texto */
+  --text-dark:    #0d1540;
+  --text-mid:     #3d5080;
+  --text-muted:   #8a9bc0;
+  --text-label:   #5a6a8a;
+  --text-on-dark: rgba(245,248,255,0.85);
+
+  /* Acento / interacción */
+  --focus-ring:   rgba(56,115,255,0.14);
+  --hover-bg:     rgba(56,115,255,0.06);
+
+  /* Tipografía */
+  --font-sans:    'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Syne', sans-serif;
+
+  /* Radios */
+  --radius-sm:  8px;
+  --radius-md:  14px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+
+  /* Sombras */
+  --shadow-card: 0 4px 24px rgba(56,115,255,0.09);
+  --shadow-btn:  0 6px 20px rgba(56,115,255,0.28);
+
+  /* Transiciones */
+  --transition: 0.2s ease;
+}

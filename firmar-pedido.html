@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nuevo Pedido — VerifySign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; background: var(--bg-form); }
+    .page-main { padding: 20px 24px 120px; flex: 1; }
+
+    .session-banner {
+      background: #eafaf0; border: 1px solid #a3e9c0;
+      border-radius: var(--radius-md); padding: 11px 14px;
+      display: flex; gap: 10px; align-items: center; margin-bottom: 16px;
+    }
+    .session-banner i { color: #1eaa5a; font-size: 18px; flex-shrink:0; }
+    .session-banner p { font-size: 12px; color: #186640; line-height: 1.4; }
+
+    /* CATÁLOGO */
+    .cat-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+      gap: 12px;
+    }
+    .prod-card {
+      background: var(--bg-white); border: 1.5px solid var(--border-light);
+      border-radius: var(--radius-md); padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .prod-card.has-qty { border-color: var(--blue); box-shadow: var(--shadow-card); }
+    .prod-top { display: flex; align-items: center; gap: 12px; }
+    .prod-emoji {
+      width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: #fff;
+    }
+    .prod-info { flex: 1; min-width: 0; }
+    .prod-name { font-size: 13px; font-weight: 700; color: var(--text-dark); line-height: 1.3; }
+    .prod-pack { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .prod-price { font-size: 14px; font-weight: 800; color: var(--blue); margin-top: 3px; }
+
+    .qty-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .qty-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .qty-ctrl { display: flex; align-items: center; gap: 0; border: 1.5px solid var(--border-light); border-radius: var(--radius-sm); overflow: hidden; }
+    .qty-btn {
+      width: 34px; height: 34px; border: none; background: var(--bg-form);
+      color: var(--blue); font-size: 18px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; transition: background .15s;
+    }
+    .qty-btn:hover { background: var(--hover-bg); }
+    .qty-btn:disabled { color: #c8d4ee; cursor: not-allowed; }
+    .qty-val {
+      width: 44px; text-align: center; border: none; outline: none;
+      font-size: 14px; font-weight: 700; color: var(--text-dark);
+      background: #fff; font-family: var(--font-sans);
+    }
+
+    /* CARRITO FLOTANTE */
+    .cart-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: var(--bg-white); border-top: 1px solid var(--border-light);
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+      padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+    }
+    .cart-summary { display: flex; flex-direction: column; }
+    .cart-count { font-size: 12px; color: var(--text-muted); }
+    .cart-total { font-size: 20px; font-weight: 800; color: var(--text-dark); font-family: var(--font-display); }
+    .cart-actions { display: flex; gap: 10px; }
+
+    /* RESUMEN PEDIDO */
+    .resumen-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+    .resumen-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: var(--bg-form); border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+    .resumen-item .ri-name { color: var(--text-dark); font-weight: 600; }
+    .resumen-item .ri-qty  { color: var(--text-muted); font-size: 12px; }
+    .resumen-item .ri-sub  { font-weight: 700; color: var(--text-dark); }
+
+    .firma-result {
+      background: var(--bg-white); border: 1.5px solid #a3e9c0;
+      border-radius: var(--radius-lg); padding: 18px; margin-top: 16px; display: none;
+    }
+    .firma-result.visible { display: block; animation: fadeUp .4s ease both; }
+    .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+    .result-icon { width: 38px; height: 38px; border-radius: 50%; background: #eafaf0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .result-icon i { font-size: 19px; color: #1eaa5a; }
+    .result-title { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+    .result-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .data-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; gap: 12px; }
+    .data-row:last-child { border-bottom: none; }
+    .data-row .dk { color: var(--text-muted); flex-shrink: 0; }
+    .data-row .dv { font-weight: 600; color: var(--text-dark); text-align: right; word-break: break-all; font-family: 'Courier New', monospace; font-size: 11px; }
+
+    .field-fecha { max-width: 240px; }
+    .empty-hint { font-size: 13px; color: var(--text-muted); text-align: center; padding: 8px; }
+  </style>
+</head>
+<body>
+
+  <div class="form-header">
+    <div class="form-header-top">
+      <a class="back-btn" href="index.html"><i class="ti ti-chevron-left"></i> Inicio</a>
+      <div id="header-user-info" style="font-size:12px;color:rgba(255,255,255,0.7)"></div>
+    </div>
+    <div class="header-badge"><i class="ti ti-shopping-cart"></i> Nuevo pedido</div>
+    <h1>Arma tu pedido de refrescos</h1>
+    <p>Selecciona los paquetes y cantidades, luego firma digitalmente</p>
+  </div>
+
+  <main class="page-main">
+
+    <div class="session-banner" id="banner-session">
+      <i class="ti ti-shield-check"></i>
+      <p id="banner-session-text">Llave privada cargada automáticamente desde tu sesión.</p>
+    </div>
+
+    <!-- CATÁLOGO -->
+    <div class="form-section" style="animation-delay:0s">
+      <div class="section-title">
+        <div class="section-icon si-blue"><i class="ti ti-bottle"></i></div>
+        <div><h2>Catálogo de refrescos</h2><p>Indica la cantidad de paquetes que deseas</p></div>
+      </div>
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+
+    <!-- RESUMEN + FECHA -->
+    <div class="form-section" style="animation-delay:0.05s">
+      <div class="section-title">
+        <div class="section-icon si-orange"><i class="ti ti-clipboard-list"></i></div>
+        <div><h2>Resumen del pedido</h2><p>Lo que se firmará digitalmente</p></div>
+      </div>
+
+      <div class="resumen-list" id="resumen-list">
+        <p class="empty-hint">Aún no has seleccionado productos.</p>
+      </div>
+
+      <div class="field field-fecha" style="margin-top:14px">
+        <label>Fecha de entrega deseada</label>
+        <div class="input-wrap">
+          <input type="date" id="fecha-entrega"/>
+        </div>
+      </div>
+
+      <div class="firma-result" id="resultado-firma">
+        <div class="result-header">
+          <div class="result-icon"><i class="ti ti-circle-check"></i></div>
+          <div>
+            <p class="result-title">Pedido firmado y registrado</p>
+            <p class="result-sub">Firma ECDSA P-256 + SHA-256 generada</p>
+          </div>
+        </div>
+        <div class="data-row"><span class="dk">Folio</span><span class="dv" id="r-folio"></span></div>
+        <div class="data-row"><span class="dk">SHA-256 del pedido</span><span class="dv" id="r-hash"></span></div>
+        <div class="data-row"><span class="dk">Firma (Base64, 48 chars)</span><span class="dv" id="r-firma"></span></div>
+        <div class="data-row"><span class="dk">Estado</span><span class="dv">Firmado por cliente · esperando vendedor</span></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="pedidos.html" class="btn btn-primary btn-sm"><i class="ti ti-list-check"></i> Ver mis pedidos</a>
+          <button class="btn btn-secondary btn-sm" onclick="location.reload()"><i class="ti ti-plus"></i> Nuevo pedido</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BARRA DE CARRITO -->
+  <div class="cart-bar">
+    <div class="cart-summary">
+      <span class="cart-count" id="cart-count">0 paquetes</span>
+      <span class="cart-total" id="cart-total">$0.00</span>
+    </div>
+    <div class="cart-actions">
+      <button class="btn btn-primary btn-lg" id="btn-firmar" onclick="firmarPedido()">
+        <i class="ti ti-writing"></i> Firmar y enviar pedido
+      </button>
+    </div>
+  </div>
+
+  <footer class="site-footer" style="margin-bottom:64px">
+    <span class="footer-copy">VerifySign — ECDSA P-256</span>
+    <div class="footer-socials"><i class="ti ti-shield-lock"></i></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/ecdsa-engine.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    const session = JSON.parse(localStorage.getItem('vs_session') || 'null');
+    if (!session) { window.location.href = 'login.html'; }
+    if (session && session.rol !== 'cliente') {
+      // Solo los clientes crean pedidos
+      alert('Solo los clientes pueden crear pedidos. Redirigiendo a la lista de pedidos.');
+      window.location.href = 'pedidos.html';
+    }
+
+    const cantidades = {};  // { idProducto: cantidad }
+
+    function init() {
+      document.getElementById('header-user-info').textContent = session.nombre + ' · ' + session.rol;
+      document.getElementById('banner-session-text').textContent =
+        `Sesión: ${session.nombre} (cliente). Tu llave privada firmará el pedido automáticamente.`;
+
+      // Render catálogo
+      const grid = document.getElementById('cat-grid');
+      grid.innerHTML = CATALOGO.map(p => `
+        <div class="prod-card" id="card-${p.id}">
+          <div class="prod-top">
+            <div class="prod-emoji" style="background:${p.color}">${p.emoji}</div>
+            <div class="prod-info">
+              <div class="prod-name">${p.nombre}</div>
+              <div class="prod-pack">${p.paquete}</div>
+              <div class="prod-price">${formatoMXN(p.precio)}</div>
+            </div>
+          </div>
+          <div class="qty-row">
+            <span class="qty-label">Cantidad</span>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="cambiarQty('${p.id}',-1)">−</button>
+              <input class="qty-val" id="qty-${p.id}" type="number" min="0" value="0"
+                     onchange="setQty('${p.id}', this.value)"/>
+              <button class="qty-btn" onclick="cambiarQty('${p.id}',1)">+</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Fecha por defecto: +3 días
+      const d = new Date(); d.setDate(d.getDate() + 3);
+      document.getElementById('fecha-entrega').value = d.toISOString().slice(0,10);
+    }
+
+    function cambiarQty(id, delta) {
+      const actual = cantidades[id] || 0;
+      const nuevo  = Math.max(0, actual + delta);
+      setQty(id, nuevo);
+      document.getElementById('qty-' + id).value = nuevo;
+    }
+
+    function setQty(id, val) {
+      const n = Math.max(0, parseInt(val) || 0);
+      if (n === 0) delete cantidades[id]; else cantidades[id] = n;
+      document.getElementById('card-' + id).classList.toggle('has-qty', n > 0);
+      actualizarResumen();
+    }
+
+    function getItems() {
+      return Object.entries(cantidades).map(([id, cant]) => {
+        const p = catalogoPorId(id);
+        return { id, nombre: p.nombre, paquete: p.paquete, precio: p.precio, cantidad: cant, subtotal: p.precio * cant };
+      });
+    }
+
+    function actualizarResumen() {
+      const items = getItems();
+      const lista = document.getElementById('resumen-list');
+      const totalPaq = items.reduce((s,i) => s + i.cantidad, 0);
+      const total    = items.reduce((s,i) => s + i.subtotal, 0);
+
+      if (items.length === 0) {
+        lista.innerHTML = '<p class="empty-hint">Aún no has seleccionado productos.</p>';
+      } else {
+        lista.innerHTML = items.map(i => `
+          <div class="resumen-item">
+            <div>
+              <span class="ri-name">${i.nombre}</span><br>
+              <span class="ri-qty">${i.cantidad} × ${formatoMXN(i.precio)} · ${i.paquete}</span>
+            </div>
+            <span class="ri-sub">${formatoMXN(i.subtotal)}</span>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('cart-count').textContent = totalPaq + (totalPaq === 1 ? ' paquete' : ' paquetes');
+      document.getElementById('cart-total').textContent = formatoMXN(total);
+    }
+
+    // ── FIRMAR Y REGISTRAR PEDIDO ─────────────────────────────────────────
+    async function firmarPedido() {
+      const items = getItems();
+      if (items.length === 0) { mostrarToast('Selecciona al menos un producto', 'warning'); return; }
+
+      const total  = items.reduce((s,i) => s + i.subtotal, 0);
+      const fecha  = document.getElementById('fecha-entrega').value;
+
+      const btn = document.getElementById('btn-firmar');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> Firmando...';
+
+      try {
+        const folio = await DB.nextFolio();
+
+        // El documento firmado es la ÚNICA fuente de verdad del pedido.
+        // El nombre/usuario NO se duplican aquí: se referencian por username
+        // (los datos sensibles del cliente ya están cifrados en su registro).
+        const contenidoPedido = JSON.stringify({
+          folio,
+          cliente_username: session.username,
+          items: items.map(i => ({ id: i.id, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio, subtotal: i.subtotal })),
+          importe: total,
+          fechaEntrega: fecha,
+          timestamp: new Date().toISOString(),
+        }, null, 2);
+
+        const llavePrivada = await ECDSAEngine.importarLlavePrivada(session.llavePrivadaB64);
+        const firmaCliente = await ECDSAEngine.firmar(contenidoPedido, llavePrivada, 'cliente-web');
+
+        await DB.crearPedido({
+          folio,
+          clienteUsername: session.username,
+          clienteNombre:   session.nombre,
+          items, importe: total, fechaEntrega: fecha,
+          contenidoPedido,
+          firmaCliente,
+        });
+
+        document.getElementById('r-folio').textContent = folio;
+        document.getElementById('r-hash').textContent  = firmaCliente.sha256Contenido;
+        document.getElementById('r-firma').textContent = firmaCliente.firmaB64.substring(0,48) + '…';
+        document.getElementById('resultado-firma').classList.add('visible');
+        document.getElementById('resultado-firma').scrollIntoView({ behavior: 'smooth' });
+
+        btn.innerHTML = '<i class="ti ti-check"></i> Pedido firmado';
+        mostrarToast('Pedido firmado y enviado al vendedor ✓', 'success');
+      } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-writing"></i> Firmar y enviar pedido';
+        mostrarToast('Error al firmar: ' + (e.message || e), 'error');
+      }
+    }
+
+    function mostrarToast(msg, tipo = 'info') {
+      const icons  = { success:'ti-circle-check', error:'ti-alert-circle', warning:'ti-alert-triangle', info:'ti-info-circle' };
+      const colors = { success:'#1eaa5a', error:'#e24b4a', warning:'#f07820', info:'var(--blue)' };
+      const t = document.createElement('div');
+      t.style.cssText = `position:fixed;bottom:90px;right:24px;z-index:9999;background:#fff;border:1px solid var(--border-light);border-left:4px solid ${colors[tipo]};border-radius:var(--radius-md);padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;font-family:var(--font-sans);color:var(--text-dark);box-shadow:0 8px 32px rgba(0,0,0,0.12);animation:fadeUp 0.3s ease;max-width:320px`;
+      t.innerHTML = `<i class="ti ${icons[tipo]}" style="color:${colors[tipo]};font-size:18px;flex-shrink:0"></i><span>${msg}</span>`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+
+    init();
+  </script>
+</body>
+</html>

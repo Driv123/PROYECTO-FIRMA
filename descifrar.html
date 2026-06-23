@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Descifrador — VerifySign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="css/variables.css"/>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; background:var(--bg-form); }
+    .page-main { padding:24px; max-width:760px; margin:0 auto; width:100%; }
+    .head {
+      background: linear-gradient(135deg,#0d4a2f,#1eaa5a); border-radius:var(--radius-lg);
+      padding:24px; margin-bottom:20px; color:#fff;
+    }
+    .head h1 { font-family:var(--font-display); font-size:22px; margin-bottom:6px; }
+    .head p { font-size:13px; opacity:.85; line-height:1.5; }
+    .panel { background:#fff; border:1px solid var(--border-light); border-radius:var(--radius-md); padding:20px; margin-bottom:16px; }
+    .panel-title { font-size:13px; font-weight:700; color:var(--text-dark); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .panel-title i { color:#1eaa5a; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; font-size:12px; font-weight:700; color:var(--text-label); margin-bottom:6px; }
+    textarea, select, input {
+      width:100%; border:1.5px solid var(--border-light); border-radius:var(--radius-sm);
+      padding:10px 12px; font-size:12px; font-family:'JetBrains Mono',monospace; outline:none;
+      background:var(--bg-form); color:var(--text-dark); resize:vertical;
+    }
+    textarea:focus, select:focus, input:focus { border-color:#1eaa5a; background:#fff; }
+    .resultado {
+      margin-top:14px; padding:16px; border-radius:var(--radius-sm); display:none;
+      font-family:'JetBrains Mono',monospace; font-size:14px;
+    }
+    .resultado.ok { display:block; background:#eafaf0; border:1.5px solid #1eaa5a; color:#186640; }
+    .resultado.err { display:block; background:#fff0f0; border:1.5px solid #e24b4a; color:#c0392b; }
+    .back-link { color:var(--text-muted); font-size:13px; display:flex; align-items:center; gap:6px; margin-bottom:16px; }
+    .info { font-size:11px; color:var(--text-muted); line-height:1.6; margin-top:8px; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  </style>
+</head>
+<body>
+  <main class="page-main">
+    <a href="index.html" class="back-link"><i class="ti ti-arrow-left"></i> Volver al sistema</a>
+
+    <div class="head">
+      <h1><i class="ti ti-lock-open"></i> Descifrador ECIES (Almacén)</h1>
+      <p>Herramienta de demostración: solo el <strong>almacén</strong> puede descifrar los datos sensibles (tarjeta y RFC) de los clientes, porque se cifraron hacia su llave pública ECDH. Aquí se desbloquea la llave privada del almacén con su contraseña y se descifran los datos.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-building-warehouse"></i> Paso 1 — Desbloquear la llave del almacén</div>
+      <div class="row">
+        <div class="field">
+          <label>Usuario almacén</label>
+          <select id="sel-almacen"><option value="">— cargando… —</option></select>
+        </div>
+        <div class="field">
+          <label>Contraseña del almacén</label>
+          <input type="password" id="alm-pass" placeholder="••••••••"/>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="desbloquear()">
+        <i class="ti ti-key"></i> Desbloquear llave privada del almacén
+      </button>
+      <div class="resultado" id="res-unlock"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-users"></i> Paso 2 — Descifrar datos de un cliente</div>
+      <div class="field">
+        <label>Selecciona un cliente</label>
+        <select id="sel-user"><option value="">— Primero desbloquea el almacén —</option></select>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="descifrarUser()" id="btn-desc" disabled>
+        <i class="ti ti-lock-open"></i> Descifrar tarjeta y RFC
+      </button>
+      <div class="resultado" id="res-user"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-clipboard"></i> Opción manual — Descifrar un blob con una llave privada</div>
+      <div class="field">
+        <label>Blob cifrado (JSON con iv, ct, epk)</label>
+        <textarea id="blob" rows="4" placeholder='{"iv":"...","ct":"...","epk":"..."}'></textarea>
+      </div>
+      <div class="field">
+        <label>Llave privada ECDH del almacén (Base64)</label>
+        <textarea id="priv" rows="3" placeholder="(o desbloquea arriba para usarla automáticamente)"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="descifrarBlob()">
+        <i class="ti ti-lock-open"></i> Descifrar blob
+      </button>
+      <div class="resultado" id="res-blob"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/ecdsa-engine.js"></script>
+  <script src="js/db.js"></script>
+  <script>
+    let almacenes = [], clientes = [], ecdhPrivAlmacen = null;
+
+    async function init() {
+      try {
+        const todos = await DB.getTodosUsuarios();
+        almacenes = todos.filter(u => u.rol === 'almacen');
+        clientes  = todos.filter(u => u.rol === 'cliente');
+        document.getElementById('sel-almacen').innerHTML = '<option value="">— Selecciona —</option>' +
+          almacenes.map(u => `<option value="${u.username}">${u.nombre} (@${u.username})</option>`).join('');
+      } catch (e) {
+        document.getElementById('sel-almacen').innerHTML = '<option>Error de conexión</option>';
+      }
+    }
+
+    async function desbloquear() {
+      const out = document.getElementById('res-unlock');
+      const u = almacenes.find(a => a.username === document.getElementById('sel-almacen').value);
+      const pass = document.getElementById('alm-pass').value;
+      if (!u) { out.className='resultado err'; out.textContent='Selecciona un almacén.'; return; }
+      if (!u.ecdh_privada_cifrada) { out.className='resultado err'; out.textContent='Ese almacén no tiene llave ECDH.'; return; }
+      try {
+        ecdhPrivAlmacen = await ECDSAEngine.descifrarLlavePrivada(u.ecdh_privada_cifrada, pass);
+        document.getElementById('priv').value = ecdhPrivAlmacen;
+        out.className = 'resultado ok';
+        out.textContent = '✓ Llave privada del almacén desbloqueada. Ahora puedes descifrar datos de clientes.';
+        // Habilitar paso 2
+        document.getElementById('sel-user').innerHTML = '<option value="">— Selecciona —</option>' +
+          clientes.map(c => `<option value="${c.username}">${c.nombre} (@${c.username})</option>`).join('');
+        document.getElementById('btn-desc').disabled = false;
+      } catch (e) {
+        ecdhPrivAlmacen = null;
+        out.className = 'resultado err';
+        out.textContent = '✗ Contraseña incorrecta del almacén.';
+      }
+    }
+
+    async function descifrarUser() {
+      const out = document.getElementById('res-user');
+      const u = clientes.find(c => c.username === document.getElementById('sel-user').value);
+      if (!ecdhPrivAlmacen) { out.className='resultado err'; out.textContent='Primero desbloquea el almacén.'; return; }
+      if (!u) { out.className='resultado err'; out.textContent='Selecciona un cliente.'; return; }
+      try {
+        const tarjeta = u.tarjeta_cifrada ? await ECDSAEngine.descifrarECIES(u.tarjeta_cifrada, ecdhPrivAlmacen) : '(sin dato)';
+        const rfc     = u.rfc_cifrado     ? await ECDSAEngine.descifrarECIES(u.rfc_cifrado, ecdhPrivAlmacen)     : '(sin dato)';
+        out.className = 'resultado ok';
+        out.innerHTML = `✓ Descifrado con la llave del almacén:<br><br>💳 Tarjeta: <strong>${tarjeta}</strong><br>🪪 RFC: <strong>${rfc}</strong><br>🏠 Dirección (en claro): ${u.direccion || '—'}`;
+      } catch (e) {
+        out.className = 'resultado err';
+        out.textContent = '✗ No se pudo descifrar: ' + (e.message || e);
+      }
+    }
+
+    async function descifrarBlob() {
+      const out = document.getElementById('res-blob');
+      try {
+        const blob = JSON.parse(document.getElementById('blob').value);
+        const priv = document.getElementById('priv').value.trim();
+        if (!priv) { out.className='resultado err'; out.textContent='Falta la llave privada (desbloquea el almacén arriba).'; return; }
+        const texto = await ECDSAEngine.descifrarECIES(blob, priv);
+        out.className = 'resultado ok';
+        out.innerHTML = `✓ Texto descifrado:<br><br><strong>${texto}</strong>`;
+      } catch (e) {
+        out.className = 'resultado err';
+        out.textContent = '✗ Error: ' + (e.message || e);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
